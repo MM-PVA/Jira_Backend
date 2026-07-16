@@ -24,29 +24,33 @@ public class RequestResponseLoggingMiddleware
 
         _logger.LogHttpRequest(context);
 
-        await _next(context);
-
-        stopwatch.Stop();
-
-        _logger.LogHttpResponse(context, stopwatch.ElapsedMilliseconds);
-
-        var requestLog = new RequestLog
+        try
         {
-            Timestamp = DateTime.UtcNow,
-            TraceId = context.TraceIdentifier,
-            Method = context.Request.Method,
-            Path = context.Request.Path,
-            IpAddress = context.Connection.RemoteIpAddress?.ToString() ?? "0.0.0.0",
-            StatusCode = context.Response.StatusCode,
-            ElapsedMilliseconds = stopwatch.ElapsedMilliseconds,
-            Level = context.Response.StatusCode.GetLogLevel().ToString()
-        };
+            await _next(context);
+        }
+        finally
+        {
+            stopwatch.Stop();
 
+            _logger.LogHttpResponse(context, stopwatch.ElapsedMilliseconds);
 
-        var jsonLog = JsonSerializer.Serialize(requestLog);
+            var requestLog = new RequestLog
+            {
+                Timestamp = DateTime.UtcNow,
+                TraceId = context.TraceIdentifier,
+                Method = context.Request.Method,
+                Path = context.Request.Path,
+                IpAddress = context.Connection.RemoteIpAddress?.ToString() ?? "Unknown",
+                StatusCode = context.Response.StatusCode,
+                ElapsedMilliseconds = stopwatch.ElapsedMilliseconds,
+                Level = context.Response.StatusCode.GetLogLevel().ToString()
+            };
 
-        var filePath = Path.Combine(_logFilePath, $"{DateTime.UtcNow:yyyy-MM-dd}.jsonl");
+            var json = JsonSerializer.Serialize(requestLog);
 
-        await File.AppendAllTextAsync(filePath, jsonLog + Environment.NewLine);
+            var filePath = Path.Combine(_logFilePath, $"{DateTime.UtcNow:yyyy-MM-dd}.jsonl");
+
+            await File.AppendAllTextAsync(filePath, json + Environment.NewLine);
+        }
     }
 }

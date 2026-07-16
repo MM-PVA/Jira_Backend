@@ -55,9 +55,9 @@ builder.Services.AddAuthorization();
 var app = builder.Build();
 
 // Configure middleware
+app.UseMiddleware<RequestResponseLoggingMiddleware>();
 app.UseExceptionHandler();
 app.UseHttpLogging();
-app.UseMiddleware<RequestResponseLoggingMiddleware>();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();

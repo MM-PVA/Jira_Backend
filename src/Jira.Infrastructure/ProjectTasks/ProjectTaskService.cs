@@ -96,11 +96,11 @@ public class ProjectTaskService : IProjectTaskService
             })
             .FirstOrDefaultAsync();
 
-        if (task is null)
-        {
-            _logger.LogWarning("Attempt to get non-existent project task: {ProjectTaskId}", model.ProjectTaskId);
-            throw new NotFoundException("Task not found.");
-        }
+        // if (task is null)
+        // {
+        //     _logger.LogWarning("Attempt to get non-existent project task: {ProjectTaskId}", model.ProjectTaskId);
+        //     throw new NotFoundException("Task not found.");
+        // }
 
         _logger.LogInformation("Project task retrieved successfully with ID: {ProjectTaskId}", task.Id);
 
