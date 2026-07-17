@@ -1,7 +1,9 @@
-using System.Security.Claims;
+﻿using System.Security.Claims;
+
 using Jira.Application.ProjectTasks.DTOs;
 using Jira.Application.ProjectTasks.Interfaces;
 using Jira.Application.ProjectTasks.Models;
+
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -10,18 +12,15 @@ namespace Jira.Api.Controllers;
 [ApiController]
 [Route("api/workspaces/{workspaceId:guid}/projects/{projectId:guid}/tasks")]
 [Authorize]
-public class ProjectTaskController : ControllerBase
+public class ProjectTaskController(IProjectTaskService projectTaskService) : ControllerBase
 {
-    private readonly IProjectTaskService _projectTaskService;
-
-    public ProjectTaskController(IProjectTaskService projectTaskService)
-    {
-        _projectTaskService = projectTaskService;
-    }
+    private readonly IProjectTaskService _projectTaskService = projectTaskService;
 
     [HttpPost]
-    public async Task<IActionResult> Create(Guid workspaceId, Guid projectId, CreateProjectTaskRequest request)
+    public async Task<IActionResult> CreateAsync(Guid workspaceId, Guid projectId, CreateProjectTaskRequest request)
     {
+        ArgumentNullException.ThrowIfNull(request);
+
         var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
 
         if (!Guid.TryParse(userIdClaim, out var ownerId))
@@ -41,14 +40,16 @@ public class ProjectTaskController : ControllerBase
             DueDate = request.DueDate
         };
 
-        var response = await _projectTaskService.CreateAsync(model);
+        var response = await _projectTaskService.CreateAsync(model).ConfigureAwait(false);
 
-        return Created(string.Empty, response);
+        return CreatedAtAction(nameof(GetByIdAsync), new { workspaceId, projectId, taskId = response.Id }, response);
     }
 
     [HttpGet]
-    public async Task<IActionResult> GetAll(Guid workspaceId, Guid projectId)
+    public async Task<IActionResult> GetAllAsync(Guid workspaceId, Guid projectId, [FromQuery] GetProjectTasksRequest request)
     {
+        ArgumentNullException.ThrowIfNull(request);
+
         var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
 
         if (!Guid.TryParse(userIdClaim, out var ownerId))
@@ -60,16 +61,17 @@ public class ProjectTaskController : ControllerBase
         {
             WorkspaceId = workspaceId,
             ProjectId = projectId,
-            OwnerId = ownerId
+            OwnerId = ownerId,
+            Search = request.Search
         };
 
-        var response = await _projectTaskService.GetAllAsync(model);
+        var response = await _projectTaskService.GetAllAsync(model).ConfigureAwait(false);
 
         return Ok(response);
     }
 
     [HttpGet("{taskId:guid}")]
-    public async Task<IActionResult> GetById(Guid workspaceId, Guid projectId, Guid taskId)
+    public async Task<IActionResult> GetByIdAsync(Guid workspaceId, Guid projectId, Guid taskId)
     {
         var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
 
@@ -86,14 +88,18 @@ public class ProjectTaskController : ControllerBase
             OwnerId = ownerId
         };
 
-        var response = await _projectTaskService.GetByIdAsync(model);
+        ArgumentNullException.ThrowIfNull(model);
+
+        var response = await _projectTaskService.GetByIdAsync(model).ConfigureAwait(false);
 
         return Ok(response);
     }
 
     [HttpPut("{taskId:guid}")]
-    public async Task<IActionResult> Update(Guid workspaceId, Guid projectId, Guid taskId, UpdateProjectTaskRequest request)
+    public async Task<IActionResult> UpdateAsync(Guid workspaceId, Guid projectId, Guid taskId, UpdateProjectTaskRequest request)
     {
+        ArgumentNullException.ThrowIfNull(request);
+
         var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
 
         if (!Guid.TryParse(userIdClaim, out var ownerId))
@@ -114,13 +120,13 @@ public class ProjectTaskController : ControllerBase
             DueDate = request.DueDate
         };
 
-        var response = await _projectTaskService.UpdateAsync(model);
+        var response = await _projectTaskService.UpdateAsync(model).ConfigureAwait(false);
 
         return Ok(response);
     }
 
     [HttpDelete("{taskId:guid}")]
-    public async Task<IActionResult> Delete(Guid workspaceId, Guid projectId, Guid taskId)
+    public async Task<IActionResult> DeleteAsync(Guid workspaceId, Guid projectId, Guid taskId)
     {
         var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
 
@@ -137,7 +143,7 @@ public class ProjectTaskController : ControllerBase
             OwnerId = ownerId
         };
 
-        await _projectTaskService.DeleteAsync(model);
+        await _projectTaskService.DeleteAsync(model).ConfigureAwait(false);
 
         return NoContent();
     }

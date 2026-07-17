@@ -1,4 +1,5 @@
-using Jira.Domain.Common;
+﻿using Jira.Domain.Common;
+
 using System.ComponentModel.DataAnnotations;
 
 namespace Jira.Domain.Entities;
@@ -17,5 +18,6 @@ public class Workspace : BaseEntity
     // navigation property
     public User Owner { get; set; } = null!;
 
-    public ICollection<Project> Projects { get; set; } = new List<Project>();
+    // public ICollection<Project> Projects { get; set; } = new List<Project>();
+    public ICollection<Project> Projects { get; } = [];
 }

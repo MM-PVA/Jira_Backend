@@ -1,4 +1,6 @@
-namespace Jira.Application.Logging.Interfaces;  
+﻿using Jira.Application.Logging.DTOs;
+
+namespace Jira.Application.Logging.Interfaces;
 
 public interface ILogService
 {

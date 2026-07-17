@@ -1,4 +1,4 @@
-using System.Text;
+﻿using System.Text;
 using Jira.Api.ExceptionHandling;
 using Jira.Api.Middleware;
 using Jira.Infrastructure;
@@ -12,11 +12,9 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Register Controllers
 builder.Services.AddControllers().AddJsonOptions(options =>
-    {
-        // Enum Serialization
-        options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
-    }); 
-    
+    // Enum Serialization
+    options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
+
 builder.Services.AddHttpLogging();
 
 // Register Infrastructure services
@@ -62,5 +60,4 @@ app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
 
-Console.WriteLine("\nJira api server is running on http://localhost:5073");
 app.Run();

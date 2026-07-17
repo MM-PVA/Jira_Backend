@@ -1,4 +1,5 @@
-using Jira.Domain.Common;
+﻿using Jira.Domain.Common;
+
 using System.ComponentModel.DataAnnotations;
 
 namespace Jira.Domain.Entities;
@@ -18,5 +19,5 @@ public class Project : BaseEntity
 
     public Workspace Workspace { get; set; } = null!;
 
-    public ICollection<ProjectTask> Tasks { get; set; } = new List<ProjectTask>();
+    public ICollection<ProjectTask> Tasks { get; } = [];
 }

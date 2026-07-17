@@ -1,6 +1,8 @@
-using System.Text.Json;
+﻿using System.Text.Json;
+
 using Jira.Application.Logging.Interfaces;
 using Jira.Application.Logging.Models;
+using Jira.Application.Logging.DTOs;
 
 namespace Jira.Infrastructure.Logging;
 
@@ -10,9 +12,12 @@ public class LogService : ILogService
 
     public async Task<PagedLogResponse> GetLogsAsync(LogQueryRequest request)
     {
+        // Validate the request object is not null
+        ArgumentNullException.ThrowIfNull(request);
+
         var filePath = Path.Combine(_logFilePath, $"{DateTime.UtcNow:yyyy-MM-dd}.jsonl");
 
-        var lines = await File.ReadAllLinesAsync(filePath);
+        var lines = await File.ReadAllLinesAsync(filePath).ConfigureAwait(false);
 
         var logs = lines
             .Where(line => !string.IsNullOrWhiteSpace(line))
@@ -22,14 +27,14 @@ public class LogService : ILogService
         if (!string.IsNullOrWhiteSpace(request.Level))
         {
             logs = logs
-                .Where(log => log.Level.Equals(request.Level))
+                .Where(log => log.Level.Equals(request.Level, StringComparison.OrdinalIgnoreCase))
                 .ToList();
         }
 
         if (!string.IsNullOrWhiteSpace(request.Method))
         {
             logs = logs
-                .Where(log => log.Method.Equals(request.Method))
+                .Where(log => log.Method.Equals(request.Method, StringComparison.OrdinalIgnoreCase))
                 .ToList();
         }
 
@@ -43,14 +48,14 @@ public class LogService : ILogService
         if (!string.IsNullOrWhiteSpace(request.Ip))
         {
             logs = logs
-                .Where(log => log.IpAddress.Equals(request.Ip))
+                .Where(log => log.IpAddress.Equals(request.Ip, StringComparison.OrdinalIgnoreCase))
                 .ToList();
         }
 
         if (!string.IsNullOrWhiteSpace(request.Path))
         {
             logs = logs
-                .Where(log => log.Path.Equals(request.Path))
+                .Where(log => log.Path.Equals(request.Path, StringComparison.OrdinalIgnoreCase))
                 .ToList();
         }
 
@@ -76,7 +81,7 @@ public class LogService : ILogService
     {
         var filePath = Path.Combine(_logFilePath, $"{DateTime.UtcNow:yyyy-MM-dd}.jsonl");
 
-        var lines = await File.ReadAllLinesAsync(filePath);
+        var lines = await File.ReadAllLinesAsync(filePath).ConfigureAwait(false);
 
         var result = lines
             .Where(line => !string.IsNullOrWhiteSpace(line))
@@ -99,6 +104,3 @@ public class LogService : ILogService
         return result;
     }
 }
-
-// 127.0.0.1 - [log1, log2, log3]
-// 10.0.0.1 - [log4, log5]

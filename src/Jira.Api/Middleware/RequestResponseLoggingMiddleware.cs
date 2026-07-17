@@ -1,32 +1,28 @@
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using Jira.Api.Extensions;
 using Jira.Application.Logging.Models;
 using System.Text.Json;
 
 namespace Jira.Api.Middleware;
 
-public class RequestResponseLoggingMiddleware
+public sealed class RequestResponseLoggingMiddleware(RequestDelegate next, ILogger<RequestResponseLoggingMiddleware> logger)
 {
-    private readonly RequestDelegate _next;
-    private readonly ILogger<RequestResponseLoggingMiddleware> _logger;
+    private readonly RequestDelegate _next = next;
+    private readonly ILogger<RequestResponseLoggingMiddleware> _logger = logger;
 
     private readonly string _logFilePath = "C:/Users/PValiya/Jira/Logs";
 
-    public RequestResponseLoggingMiddleware(RequestDelegate next, ILogger<RequestResponseLoggingMiddleware> logger)
-    {
-        _next = next;
-        _logger = logger;
-    }
-
     public async Task InvokeAsync(HttpContext context)
     {
+        ArgumentNullException.ThrowIfNull(context);
+
         var stopwatch = Stopwatch.StartNew();
 
         _logger.LogHttpRequest(context);
 
         try
         {
-            await _next(context);
+            await _next(context).ConfigureAwait(false);
         }
         finally
         {
@@ -50,7 +46,7 @@ public class RequestResponseLoggingMiddleware
 
             var filePath = Path.Combine(_logFilePath, $"{DateTime.UtcNow:yyyy-MM-dd}.jsonl");
 
-            await File.AppendAllTextAsync(filePath, json + Environment.NewLine);
+            await File.AppendAllTextAsync(filePath, json + Environment.NewLine).ConfigureAwait(false);
         }
     }
 }

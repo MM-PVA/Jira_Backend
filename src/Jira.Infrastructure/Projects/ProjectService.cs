@@ -1,28 +1,25 @@
-using Jira.Application.Projects.DTOs;
+﻿using Jira.Application.Projects.DTOs;
 using Jira.Application.Projects.Interfaces;
 using Jira.Infrastructure.Persistence;
 using Jira.Domain.Entities;
 using Jira.Domain.Exceptions;
+
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
 namespace Jira.Infrastructure.Projects;
 
-public class ProjectService : IProjectService
+public class ProjectService(AppDbContext context, ILogger<ProjectService> logger) : IProjectService
 {
-    private readonly AppDbContext _context;
-    private readonly ILogger<ProjectService> _logger;
-
-    public ProjectService(AppDbContext context, ILogger<ProjectService> logger)
-    {
-        _context = context;
-        _logger = logger;
-    }
+    private readonly AppDbContext _context = context;
+    private readonly ILogger<ProjectService> _logger = logger;
 
     public async Task<ProjectResponse> CreateAsync(Guid workspaceId, Guid ownerId, CreateProjectRequest request)
     {
+        ArgumentNullException.ThrowIfNull(request);
+
         var workspace = await _context.Workspaces.FirstOrDefaultAsync(workspace =>
-            workspace.Id == workspaceId && workspace.OwnerId == ownerId);
+            workspace.Id == workspaceId && workspace.OwnerId == ownerId).ConfigureAwait(false);
 
         if (workspace is null)
         {
@@ -41,7 +38,7 @@ public class ProjectService : IProjectService
 
         _context.Projects.Add(project);
 
-        await _context.SaveChangesAsync();
+        await _context.SaveChangesAsync().ConfigureAwait(false);
 
         _logger.LogInformation("Project created successfully with ID: {ProjectId}", project.Id);
 
@@ -58,7 +55,7 @@ public class ProjectService : IProjectService
     public async Task<IEnumerable<ProjectResponse>> GetAllAsync(Guid workspaceId, Guid ownerId)
     {
         var workspace = await _context.Workspaces.FirstOrDefaultAsync(workspace =>
-            workspace.Id == workspaceId && workspace.OwnerId == ownerId);
+            workspace.Id == workspaceId && workspace.OwnerId == ownerId).ConfigureAwait(false);
 
         if (workspace is null)
         {
@@ -76,13 +73,14 @@ public class ProjectService : IProjectService
                 Status = project.Status,
                 WorkspaceId = project.WorkspaceId
             })
-            .ToListAsync();
+            .ToListAsync()
+            .ConfigureAwait(false);
     }
 
     public async Task<ProjectResponse> GetByIdAsync(Guid projectId, Guid workspaceId, Guid ownerId)
     {
         var project = await _context.Projects.Include(project => project.Workspace).FirstOrDefaultAsync(project =>
-                project.Id == projectId && project.WorkspaceId == workspaceId && project.Workspace.OwnerId == ownerId);
+                project.Id == projectId && project.WorkspaceId == workspaceId && project.Workspace.OwnerId == ownerId).ConfigureAwait(false);
 
         if (project is null)
         {
@@ -102,8 +100,10 @@ public class ProjectService : IProjectService
 
     public async Task<ProjectResponse> UpdateAsync(Guid projectId, Guid workspaceId, Guid ownerId, UpdateProjectRequest request)
     {
+        ArgumentNullException.ThrowIfNull(request);
+
         var project = await _context.Projects.Include(project => project.Workspace).FirstOrDefaultAsync(project =>
-                project.Id == projectId && project.WorkspaceId == workspaceId && project.Workspace.OwnerId == ownerId);
+                project.Id == projectId && project.WorkspaceId == workspaceId && project.Workspace.OwnerId == ownerId).ConfigureAwait(false);
 
         if (project is null)
         {
@@ -116,7 +116,7 @@ public class ProjectService : IProjectService
         project.Status = request.Status;
         project.UpdatedAt = DateTime.UtcNow;
 
-        await _context.SaveChangesAsync();
+        await _context.SaveChangesAsync().ConfigureAwait(false);
 
         _logger.LogInformation("Project updated successfully with ID: {ProjectId}", project.Id);
 
@@ -133,7 +133,7 @@ public class ProjectService : IProjectService
     public async Task DeleteAsync(Guid projectId, Guid workspaceId, Guid ownerId)
     {
         var project = await _context.Projects.Include(project => project.Workspace).FirstOrDefaultAsync(project =>
-                project.Id == projectId && project.WorkspaceId == workspaceId && project.Workspace.OwnerId == ownerId);
+                project.Id == projectId && project.WorkspaceId == workspaceId && project.Workspace.OwnerId == ownerId).ConfigureAwait(false);
 
         if (project is null)
         {
@@ -145,6 +145,6 @@ public class ProjectService : IProjectService
 
         _logger.LogInformation("Project deleted successfully with ID: {ProjectId}", project.Id);
 
-        await _context.SaveChangesAsync();
+        await _context.SaveChangesAsync().ConfigureAwait(false);
     }
 }

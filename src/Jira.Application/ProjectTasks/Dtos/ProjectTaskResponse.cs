@@ -1,4 +1,5 @@
-using Jira.Domain.Enums;
+﻿using Jira.Domain.Enums;
+
 using System.Text.Json.Serialization;
 
 namespace Jira.Application.ProjectTasks.DTOs;

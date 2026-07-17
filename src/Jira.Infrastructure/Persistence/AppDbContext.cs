@@ -1,4 +1,5 @@
-using Jira.Domain.Entities;
+﻿using Jira.Domain.Entities;
+
 using Microsoft.EntityFrameworkCore;
 
 namespace Jira.Infrastructure.Persistence;
@@ -13,6 +14,8 @@ public class AppDbContext : DbContext
     // Convert enums to strings for storage in the database
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        ArgumentNullException.ThrowIfNull(modelBuilder);
+
         base.OnModelCreating(modelBuilder);
         modelBuilder.Entity<ProjectTask>().Property(task => task.Status).HasConversion<string>();
         modelBuilder.Entity<ProjectTask>().Property(task => task.Priority).HasConversion<string>();

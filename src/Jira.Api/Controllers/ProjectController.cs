@@ -1,6 +1,8 @@
-using System.Security.Claims;
+﻿using System.Security.Claims;
+
 using Jira.Application.Projects.DTOs;
 using Jira.Application.Projects.Interfaces;
+
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -9,18 +11,15 @@ namespace Jira.Api.Controllers;
 [ApiController]
 [Route("api/workspaces/{workspaceId:guid}/projects")]
 [Authorize]
-public class ProjectController : ControllerBase
+public class ProjectController(IProjectService projectService) : ControllerBase
 {
-    private readonly IProjectService _projectService;
-
-    public ProjectController(IProjectService projectService)
-    {
-        _projectService = projectService;
-    }
+    private readonly IProjectService _projectService = projectService;
 
     [HttpPost]
-    public async Task<IActionResult> Create(Guid workspaceId, CreateProjectRequest request)
+    public async Task<IActionResult> CreateAsync(Guid workspaceId, CreateProjectRequest request)
     {
+        ArgumentNullException.ThrowIfNull(request);
+
         var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
 
         if (!Guid.TryParse(userIdClaim, out var ownerId))
@@ -28,13 +27,13 @@ public class ProjectController : ControllerBase
             return Unauthorized();
         }
 
-        var response = await _projectService.CreateAsync(workspaceId, ownerId, request);
+        var response = await _projectService.CreateAsync(workspaceId, ownerId, request).ConfigureAwait(false);
 
-        return Created(string.Empty, response);
+        return CreatedAtAction(nameof(GetByIdAsync), new { workspaceId, projectId = response.Id }, response);
     }
 
     [HttpGet]
-    public async Task<IActionResult> GetAll(Guid workspaceId)
+    public async Task<IActionResult> GetAllAsync(Guid workspaceId)
     {
         var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
 
@@ -43,13 +42,13 @@ public class ProjectController : ControllerBase
             return Unauthorized();
         }
 
-        var response = await _projectService.GetAllAsync(workspaceId, ownerId);
+        var response = await _projectService.GetAllAsync(workspaceId, ownerId).ConfigureAwait(false);
 
         return Ok(response);
     }
 
     [HttpGet("{projectId:guid}")]
-    public async Task<IActionResult> GetById(Guid workspaceId, Guid projectId)
+    public async Task<IActionResult> GetByIdAsync(Guid workspaceId, Guid projectId)
     {
         var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
 
@@ -58,17 +57,16 @@ public class ProjectController : ControllerBase
             return Unauthorized();
         }
 
-        var response = await _projectService.GetByIdAsync(projectId, workspaceId, ownerId);
+        var response = await _projectService.GetByIdAsync(projectId, workspaceId, ownerId).ConfigureAwait(false);
 
         return Ok(response);
     }
 
     [HttpPut("{projectId:guid}")]
-    public async Task<IActionResult> Update(
-    Guid workspaceId,
-    Guid projectId,
-    UpdateProjectRequest request)
+    public async Task<IActionResult> UpdateAsync(Guid workspaceId, Guid projectId, UpdateProjectRequest request)
     {
+        ArgumentNullException.ThrowIfNull(request);
+
         var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
 
         if (!Guid.TryParse(userIdClaim, out var ownerId))
@@ -76,17 +74,13 @@ public class ProjectController : ControllerBase
             return Unauthorized();
         }
 
-        var response = await _projectService.UpdateAsync(
-            projectId,
-            workspaceId,
-            ownerId,
-            request);
+        var response = await _projectService.UpdateAsync(projectId, workspaceId, ownerId, request).ConfigureAwait(false);
 
         return Ok(response);
     }
 
     [HttpDelete("{projectId:guid}")]
-    public async Task<IActionResult> Delete( Guid workspaceId, Guid projectId)
+    public async Task<IActionResult> DeleteAsync(Guid workspaceId, Guid projectId)
     {
         var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
 
@@ -95,7 +89,7 @@ public class ProjectController : ControllerBase
             return Unauthorized();
         }
 
-        await _projectService.DeleteAsync(projectId, workspaceId, ownerId);
+        await _projectService.DeleteAsync(projectId, workspaceId, ownerId).ConfigureAwait(false);
 
         return NoContent();
     }

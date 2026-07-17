@@ -1,4 +1,4 @@
-using Jira.Application.ProjectTasks.DTOs;
+﻿using Jira.Application.ProjectTasks.DTOs;
 using Jira.Application.ProjectTasks.Models;
 
 namespace Jira.Application.ProjectTasks.Interfaces;
@@ -12,6 +12,6 @@ public interface IProjectTaskService
     Task<ProjectTaskResponse> GetByIdAsync(GetProjectTaskByIdModel model);
 
     Task<ProjectTaskResponse> UpdateAsync(UpdateProjectTaskModel model);
-    
+
     Task DeleteAsync(DeleteProjectTaskModel model);
 }

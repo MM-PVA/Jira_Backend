@@ -1,26 +1,23 @@
-using Jira.Application.Workspaces.DTOs;
+﻿using Jira.Application.Workspaces.DTOs;
 using Jira.Application.Workspaces.Interfaces;
 using Jira.Infrastructure.Persistence;
 using Jira.Domain.Entities;
 using Jira.Domain.Exceptions;
+
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
 namespace Jira.Infrastructure.Workspaces;
 
-public class WorkspaceService : IWorkspaceService
+public class WorkspaceService(AppDbContext context, ILogger<WorkspaceService> logger) : IWorkspaceService
 {
-    private readonly AppDbContext _context;
-    private readonly ILogger<WorkspaceService> _logger;
-
-    public WorkspaceService(AppDbContext context, ILogger<WorkspaceService> logger)
-    {
-        _context = context;
-        _logger = logger;
-    }
+    private readonly AppDbContext _context = context;
+    private readonly ILogger<WorkspaceService> _logger = logger;
 
     public async Task<WorkspaceResponse> CreateAsync(Guid ownerId, CreateWorkspaceRequest request)
     {
+        ArgumentNullException.ThrowIfNull(request);
+
         var workspace = new Workspace
         {
             Name = request.Name,
@@ -31,7 +28,7 @@ public class WorkspaceService : IWorkspaceService
 
         _context.Workspaces.Add(workspace);
 
-        await _context.SaveChangesAsync();
+        await _context.SaveChangesAsync().ConfigureAwait(false);
 
         _logger.LogInformation("Workspace created successfully with ID: {WorkspaceId}", workspace.Id);
 
@@ -55,13 +52,14 @@ public class WorkspaceService : IWorkspaceService
             Description = workspace.Description,
             OwnerId = workspace.OwnerId
         })
-        .ToListAsync(); // this line will execute the query and return the results as a list
+        .ToListAsync() // this line will execute the query and return the results as a list
+        .ConfigureAwait(false);
     }
 
     public async Task<WorkspaceResponse> GetByIdAsync(Guid workspaceId, Guid ownerId)
     {
         var workspace = await _context.Workspaces.FirstOrDefaultAsync(workspace =>
-            workspace.Id == workspaceId && workspace.OwnerId == ownerId);
+            workspace.Id == workspaceId && workspace.OwnerId == ownerId).ConfigureAwait(false);
 
         if (workspace is null)
         {
@@ -82,8 +80,10 @@ public class WorkspaceService : IWorkspaceService
 
     public async Task<WorkspaceResponse> UpdateAsync(Guid workspaceId, Guid ownerId, UpdateWorkspaceRequest request)
     {
+        ArgumentNullException.ThrowIfNull(request);
+
         var workspace = await _context.Workspaces.FirstOrDefaultAsync(workspace =>
-           workspace.Id == workspaceId && workspace.OwnerId == ownerId);
+           workspace.Id == workspaceId && workspace.OwnerId == ownerId).ConfigureAwait(false);
 
         if (workspace is null)
         {
@@ -95,7 +95,7 @@ public class WorkspaceService : IWorkspaceService
         workspace.Description = request.Description;
         workspace.UpdatedAt = DateTime.UtcNow;
 
-        await _context.SaveChangesAsync();
+        await _context.SaveChangesAsync().ConfigureAwait(false);
 
         _logger.LogInformation("Workspace updated successfully with ID: {WorkspaceId}", workspace.Id);
 
@@ -111,7 +111,7 @@ public class WorkspaceService : IWorkspaceService
     public async Task DeleteAsync(Guid workspaceId, Guid ownerId)
     {
         var workspace = await _context.Workspaces.FirstOrDefaultAsync(workspace =>
-            workspace.Id == workspaceId && workspace.OwnerId == ownerId);
+            workspace.Id == workspaceId && workspace.OwnerId == ownerId).ConfigureAwait(false);
 
         if (workspace is null)
         {
@@ -122,6 +122,6 @@ public class WorkspaceService : IWorkspaceService
         _context.Workspaces.Remove(workspace);
         _logger.LogInformation("Workspace deleted successfully with ID: {WorkspaceId}", workspace.Id);
 
-        await _context.SaveChangesAsync();
+        await _context.SaveChangesAsync().ConfigureAwait(false);
     }
 }

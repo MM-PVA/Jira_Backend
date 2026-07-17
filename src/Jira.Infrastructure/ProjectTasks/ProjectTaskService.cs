@@ -1,29 +1,26 @@
-using Jira.Application.ProjectTasks.DTOs;
+﻿using Jira.Application.ProjectTasks.DTOs;
 using Jira.Application.ProjectTasks.Interfaces;
 using Jira.Application.ProjectTasks.Models;
 using Jira.Domain.Entities;
 using Jira.Domain.Exceptions;
 using Jira.Infrastructure.Persistence;
+
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
 namespace Jira.Infrastructure.ProjectTasks;
 
-public class ProjectTaskService : IProjectTaskService
+public class ProjectTaskService(AppDbContext context, ILogger<ProjectTaskService> logger) : IProjectTaskService
 {
-    private readonly AppDbContext _context;
-    private readonly ILogger<ProjectTaskService> _logger;
-
-    public ProjectTaskService(AppDbContext context, ILogger<ProjectTaskService> logger)
-    {
-        _context = context;
-        _logger = logger;
-    }
+    private readonly AppDbContext _context = context;
+    private readonly ILogger<ProjectTaskService> _logger = logger;
 
     public async Task<ProjectTaskResponse> CreateAsync(CreateProjectTaskModel model)
     {
+        ArgumentNullException.ThrowIfNull(model);
+
         var project = await _context.Projects.Include(project => project.Workspace).FirstOrDefaultAsync(project =>
-            project.Id == model.ProjectId && project.WorkspaceId == model.WorkspaceId && project.Workspace.OwnerId == model.OwnerId);
+            project.Id == model.ProjectId && project.WorkspaceId == model.WorkspaceId && project.Workspace.OwnerId == model.OwnerId).ConfigureAwait(false);
 
         if (project is null)
         {
@@ -49,7 +46,7 @@ public class ProjectTaskService : IProjectTaskService
 
         _logger.LogInformation("Project task created successfully with ID: {ProjectTaskId}", projectTask.Id);
 
-        await _context.SaveChangesAsync();
+        await _context.SaveChangesAsync().ConfigureAwait(false);
 
         return new ProjectTaskResponse
         {
@@ -65,8 +62,17 @@ public class ProjectTaskService : IProjectTaskService
 
     public async Task<IEnumerable<ProjectTaskResponse>> GetAllAsync(GetProjectTasksModel model)
     {
-        return await _context.ProjectTasks.Where(task =>
-            task.ProjectId == model.ProjectId && task.Project.WorkspaceId == model.WorkspaceId && task.Project.Workspace.OwnerId == model.OwnerId)
+        ArgumentNullException.ThrowIfNull(model);
+
+        var query = _context.ProjectTasks.Where(task =>
+            task.ProjectId == model.ProjectId && task.Project.WorkspaceId == model.WorkspaceId && task.Project.Workspace.OwnerId == model.OwnerId);
+
+        if (!string.IsNullOrWhiteSpace(model.Search))
+        {
+            query = _context.ProjectTasks.Where(task => EF.Functions.Like(task.Title, $"%{model.Search}%"));
+        }
+
+        return await query
             .Select(task => new ProjectTaskResponse
             {
                 Id = task.Id,
@@ -77,11 +83,14 @@ public class ProjectTaskService : IProjectTaskService
                 DueDate = task.DueDate,
                 ProjectId = task.ProjectId
             })
-            .ToListAsync();
+            .ToListAsync()
+            .ConfigureAwait(false);
     }
 
     public async Task<ProjectTaskResponse> GetByIdAsync(GetProjectTaskByIdModel model)
     {
+        ArgumentNullException.ThrowIfNull(model);
+
         var task = await _context.ProjectTasks.Where(task =>
                 task.Id == model.ProjectTaskId && task.ProjectId == model.ProjectId && task.Project.WorkspaceId == model.WorkspaceId && task.Project.Workspace.OwnerId == model.OwnerId)
             .Select(task => new ProjectTaskResponse
@@ -94,23 +103,24 @@ public class ProjectTaskService : IProjectTaskService
                 DueDate = task.DueDate,
                 ProjectId = task.ProjectId
             })
-            .FirstOrDefaultAsync();
+            .FirstOrDefaultAsync()
+            .ConfigureAwait(false);
 
-        // if (task is null)
-        // {
-        //     _logger.LogWarning("Attempt to get non-existent project task: {ProjectTaskId}", model.ProjectTaskId);
-        //     throw new NotFoundException("Task not found.");
-        // }
-
-        _logger.LogInformation("Project task retrieved successfully with ID: {ProjectTaskId}", task.Id);
+        if (task is null)
+        {
+            _logger.LogWarning("Attempt to get non-existent project task: {ProjectTaskId}", model.ProjectTaskId);
+            throw new NotFoundException("Task not found.");
+        }
 
         return task;
     }
 
     public async Task<ProjectTaskResponse> UpdateAsync(UpdateProjectTaskModel model)
     {
+        ArgumentNullException.ThrowIfNull(model);
+
         var task = await _context.ProjectTasks.FirstOrDefaultAsync(task =>
-            task.Id == model.ProjectTaskId && task.ProjectId == model.ProjectId && task.Project.WorkspaceId == model.WorkspaceId && task.Project.Workspace.OwnerId == model.OwnerId);
+            task.Id == model.ProjectTaskId && task.ProjectId == model.ProjectId && task.Project.WorkspaceId == model.WorkspaceId && task.Project.Workspace.OwnerId == model.OwnerId).ConfigureAwait(false);
 
         if (task is null)
         {
@@ -127,7 +137,7 @@ public class ProjectTaskService : IProjectTaskService
         task.DueDate = model.DueDate;
         task.UpdatedAt = DateTime.UtcNow;
 
-        await _context.SaveChangesAsync();
+        await _context.SaveChangesAsync().ConfigureAwait(false);
 
         _logger.LogInformation("Project task updated successfully with ID: {ProjectTaskId}", task.Id);
 
@@ -145,8 +155,10 @@ public class ProjectTaskService : IProjectTaskService
 
     public async Task DeleteAsync(DeleteProjectTaskModel model)
     {
+        ArgumentNullException.ThrowIfNull(model);
+
         var task = await _context.ProjectTasks.FirstOrDefaultAsync(task =>
-                task.Id == model.ProjectTaskId && task.ProjectId == model.ProjectId && task.Project.WorkspaceId == model.WorkspaceId && task.Project.Workspace.OwnerId == model.OwnerId);
+                task.Id == model.ProjectTaskId && task.ProjectId == model.ProjectId && task.Project.WorkspaceId == model.WorkspaceId && task.Project.Workspace.OwnerId == model.OwnerId).ConfigureAwait(false);
 
         if (task is null)
         {
@@ -157,6 +169,6 @@ public class ProjectTaskService : IProjectTaskService
         _context.ProjectTasks.Remove(task);
         _logger.LogInformation("Project task deleted successfully with ID: {ProjectTaskId}", task.Id);
 
-        await _context.SaveChangesAsync();
+        await _context.SaveChangesAsync().ConfigureAwait(false);
     }
 }

@@ -1,4 +1,8 @@
+﻿using System.Collections.ObjectModel;
+
 using Jira.Application.Logging.Models;
+
+namespace Jira.Application.Logging.DTOs;
 
 public class PagedLogResponse
 {
@@ -10,5 +14,5 @@ public class PagedLogResponse
 
     public int TotalPages { get; set; }
 
-    public List<RequestLog> Data { get; set; } = [];
+    public IReadOnlyCollection<RequestLog> Data { get; init; } = [];
 }

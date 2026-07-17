@@ -1,4 +1,6 @@
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
+
+namespace Jira.Application.Logging.DTOs;
 
 public class LogQueryRequest
 {

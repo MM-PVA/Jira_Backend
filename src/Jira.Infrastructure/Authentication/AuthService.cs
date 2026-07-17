@@ -1,8 +1,9 @@
-using Jira.Application.Authentication.DTOs;
+﻿using Jira.Application.Authentication.DTOs;
 using Jira.Application.Authentication.Interfaces;
 using Jira.Domain.Entities;
 using Jira.Domain.Exceptions;
 using Jira.Infrastructure.Persistence;
+
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -26,8 +27,10 @@ public class AuthService : IAuthService
 
     public async Task<RegisterResponse> RegisterAsync(RegisterRequest request)
     {
+        ArgumentNullException.ThrowIfNull(request);
+
         var existingUser = await _context.Users
-            .FirstOrDefaultAsync(x => x.Email == request.Email);
+            .FirstOrDefaultAsync(x => x.Email == request.Email).ConfigureAwait(false);
 
         if (existingUser != null)
         {
@@ -46,7 +49,7 @@ public class AuthService : IAuthService
 
         _context.Users.Add(user);
 
-        await _context.SaveChangesAsync();
+        await _context.SaveChangesAsync().ConfigureAwait(false);
 
         _logger.LogInformation("User registered successfully with email: {Email}", request.Email);
 
@@ -59,8 +62,10 @@ public class AuthService : IAuthService
 
     public async Task<LoginResponse> LoginAsync(LoginRequest request)
     {
+        ArgumentNullException.ThrowIfNull(request);
+
         var user = await _context.Users
-            .FirstOrDefaultAsync(x => x.Email == request.Email);
+            .FirstOrDefaultAsync(x => x.Email == request.Email).ConfigureAwait(false);
 
         if (user == null)
         {
@@ -87,7 +92,7 @@ public class AuthService : IAuthService
 
     public async Task<CurrentUserResponse> GetCurrentUserAsync(Guid userId)
     {
-        var user = await _context.Users.FindAsync(userId);
+        var user = await _context.Users.FindAsync(userId).ConfigureAwait(false);
 
         if (user == null)
         {

@@ -1,5 +1,7 @@
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
+
 using Jira.Domain.Common;
+
 using Jira.Domain.Enums;
 
 namespace Jira.Domain.Entities;

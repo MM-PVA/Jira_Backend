@@ -15,13 +15,15 @@ using Jira.Infrastructure.Logging;
 
 namespace Jira.Infrastructure;
 
-public static class DependencyInjection
+public static class InfrastructureRegistration
 {
     // IServiceCollection is a list of service registrations.
     public static IServiceCollection AddInfrastructure(
         this IServiceCollection services,
         IConfiguration configuration)
     {
+        ArgumentNullException.ThrowIfNull(configuration);
+
         // options is the object configures how EF Core should work.
         services.AddDbContext<AppDbContext>(options => options.UseSqlite(configuration.GetConnectionString("DefaultConnection")));
 
@@ -41,8 +43,3 @@ public static class DependencyInjection
         return services;
     }
 }
-
-/*
-Scope in dotnet : Singleton, Scoped, Transient
-Dependency Inversion Principle : High Level modules should depend on interfaces, not implementations.
-*/

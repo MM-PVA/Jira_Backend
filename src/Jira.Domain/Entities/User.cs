@@ -1,4 +1,5 @@
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
+
 using Jira.Domain.Common;
 
 namespace Jira.Domain.Entities;
@@ -21,7 +22,7 @@ public class User : BaseEntity
     [Required]
     public string PasswordHash { get; set; } = string.Empty;
 
-    public ICollection<Workspace> OwnedWorkspaces { get; set; } = new List<Workspace>();
+    public ICollection<Workspace> OwnedWorkspaces { get; } = [];
 
-    public ICollection<ProjectTask> AssignedTasks { get; set; } = new List<ProjectTask>();
+    public ICollection<ProjectTask> AssignedTasks { get; } = [];
 }

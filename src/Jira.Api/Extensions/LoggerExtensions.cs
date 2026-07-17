@@ -1,9 +1,12 @@
-namespace Jira.Api.Extensions;
+﻿namespace Jira.Api.Extensions;
 
-public static class LoggerExtensions
+internal static class LoggerExtensions
 {
-    public static void LogHttpRequest(this ILogger logger, HttpContext context)
+    internal static void LogHttpRequest(this ILogger logger, HttpContext context)
     {
+        ArgumentNullException.ThrowIfNull(logger);
+        ArgumentNullException.ThrowIfNull(context);
+
         logger.LogInformation("[Request LOGS] : [{RemoteIpAddress}]/[{TraceId}]\n\tMethod: {Method}\n\tPath: {Path}",
             context.Connection.RemoteIpAddress,
             context.TraceIdentifier,
@@ -11,8 +14,11 @@ public static class LoggerExtensions
             context.Request.Path);
     }
 
-    public static void LogHttpResponse(this ILogger logger, HttpContext context, long elapsedMilliseconds)
+    internal static void LogHttpResponse(this ILogger logger, HttpContext context, long elapsedMilliseconds)
     {
+        ArgumentNullException.ThrowIfNull(logger);
+        ArgumentNullException.ThrowIfNull(context);
+
         var statusCode = context.Response.StatusCode;
 
         var logLevel = context.Response.StatusCode.GetLogLevel();

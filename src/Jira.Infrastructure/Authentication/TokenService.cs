@@ -1,24 +1,23 @@
-using System.IdentityModel.Tokens.Jwt;
+﻿using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
+
 using Jira.Application.Authentication.Interfaces;
 using Jira.Domain.Entities;
+
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 
 namespace Jira.Infrastructure.Authentication;
 
-public class TokenService : ITokenService
+public class TokenService(IOptions<JwtSettings> jwtSettings) : ITokenService
 {
-    private readonly JwtSettings _jwtSettings;
-
-    public TokenService(IOptions<JwtSettings> jwtSettings)
-    {
-        _jwtSettings = jwtSettings.Value;
-    }
+    private readonly JwtSettings _jwtSettings = jwtSettings.Value;
 
     public (string Token, DateTime ExpiresAtUtc) GenerateToken(User user)
     {
+        ArgumentNullException.ThrowIfNull(user);
+
         var expiresAtUtc = DateTime.UtcNow.AddMinutes(_jwtSettings.ExpirationMinutes);
 
         var claims = new[]
@@ -37,8 +36,8 @@ public class TokenService : ITokenService
             audience: _jwtSettings.Audience,
             claims: claims,
             expires: expiresAtUtc,
-            signingCredentials: credentials);        
-            
+            signingCredentials: credentials);
+
         var accessToken = new JwtSecurityTokenHandler().WriteToken(token);
 
         return (accessToken, expiresAtUtc);

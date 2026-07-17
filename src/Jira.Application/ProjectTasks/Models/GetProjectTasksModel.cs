@@ -7,4 +7,6 @@ public class GetProjectTasksModel
     public Guid ProjectId { get; set; }
 
     public Guid OwnerId { get; set; }
+
+    public string? Search { get; set; }
 }
