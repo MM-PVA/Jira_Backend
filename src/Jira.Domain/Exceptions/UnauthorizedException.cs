@@ -1,18 +1,21 @@
-﻿namespace Jira.Domain.Exceptions;
+﻿using Jira.Domain.Common;
 
-public class UnauthorizedException : Exception
+namespace Jira.Domain.Exceptions;
+
+public class UnauthorizedException : AppException
 {
     public UnauthorizedException()
+        : base("Unauthorized access.")
     {
     }
 
     public UnauthorizedException(string message)
-        : base(message)
+        : base(message, ErrorCodes.Unauthorized)
     {
     }
 
     public UnauthorizedException(string message, Exception innerException)
-        : base(message, innerException)
+        : base(message, ErrorCodes.Unauthorized, innerException)
     {
     }
 }

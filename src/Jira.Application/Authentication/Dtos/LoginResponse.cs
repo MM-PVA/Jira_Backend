@@ -1,8 +1,8 @@
-namespace Jira.Application.Authentication.DTOs;
+﻿namespace Jira.Application.Authentication.DTOs;
 
 public class LoginResponse
 {
-    public string AccessToken { get; set; } = string.Empty;
+    public required string AccessToken { get; set; }
 
     public DateTime ExpiresAtUtc { get; set; }
 }

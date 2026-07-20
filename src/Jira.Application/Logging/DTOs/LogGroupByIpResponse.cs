@@ -2,7 +2,7 @@
 
 public class LogGroupByIpResponse
 {
-    public string IpAddress { get; set; } = string.Empty;
+    public string? IpAddress { get; set; }
 
     public int TotalRequests { get; set; }
 }

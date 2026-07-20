@@ -11,6 +11,7 @@ namespace Jira.Api.Controllers;
 [ApiController]
 [Route("api/workspaces/{workspaceId:guid}/projects")]
 [Authorize]
+#pragma warning disable CA1515
 public class ProjectController(IProjectService projectService) : ControllerBase
 {
     private readonly IProjectService _projectService = projectService;
@@ -94,3 +95,4 @@ public class ProjectController(IProjectService projectService) : ControllerBase
         return NoContent();
     }
 }
+#pragma warning restore CA1515

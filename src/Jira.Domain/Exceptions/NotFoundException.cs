@@ -1,18 +1,21 @@
-﻿namespace Jira.Domain.Exceptions;
+﻿using Jira.Domain.Common;
 
-public class NotFoundException : Exception
+namespace Jira.Domain.Exceptions;
+
+public class NotFoundException : AppException
 {
     public NotFoundException()
+        : base("Resource not found.", ErrorCodes.NotFound)
     {
     }
 
     public NotFoundException(string message)
-        : base(message)
+        : base(message, ErrorCodes.NotFound)
     {
     }
 
     public NotFoundException(string message, Exception innerException)
-        : base(message, innerException)
+        : base(message, ErrorCodes.NotFound, innerException)
     {
     }
 }

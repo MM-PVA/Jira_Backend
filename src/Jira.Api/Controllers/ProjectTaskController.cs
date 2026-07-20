@@ -148,3 +148,4 @@ public class ProjectTaskController(IProjectTaskService projectTaskService) : Con
         return NoContent();
     }
 }
+#pragma warning restore CA1515

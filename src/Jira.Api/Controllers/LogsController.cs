@@ -22,6 +22,39 @@ public class LogsController(ILogService logService) : ControllerBase
         return Ok(response);
     }
 
+    [HttpPost]
+    public async Task<IActionResult> SearchLogsAsync([FromBody] LogQueryRequest request)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+
+        var result = await _logService.GetLogsAsync(request).ConfigureAwait(false);
+
+        return Ok(result);
+    }
+
+    [HttpGet("header-search")]
+    public async Task<IActionResult> SearchLogsFromHeaderAsync(
+        [FromHeader(Name = "Level")] string? level,
+        [FromHeader(Name = "Method")] string? method,
+        [FromHeader(Name = "StatusCode")] int? statusCode,
+        [FromHeader(Name = "Ip")] string? ip,
+        [FromHeader(Name = "Path")] string? path
+    )
+    {
+        var request = new LogQueryRequest
+        {
+            Level = level,
+            Method = method,
+            StatusCode = statusCode,
+            Ip = ip,
+            Path = path,
+        };
+
+        var result = await _logService.GetLogsAsync(request).ConfigureAwait(false);
+
+        return Ok(result);
+    }
+
     [HttpGet("ip-group")]
     public async Task<IActionResult> GroupByIpAsync(int? threshold)
     {
