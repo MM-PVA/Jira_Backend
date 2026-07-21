@@ -1,5 +1,7 @@
 ﻿using System.Security.Claims;
 
+using Asp.Versioning;
+
 using Jira.Application.ProjectTasks.DTOs;
 using Jira.Application.ProjectTasks.Interfaces;
 using Jira.Application.ProjectTasks.Models;
@@ -10,8 +12,10 @@ using Microsoft.AspNetCore.Mvc;
 namespace Jira.Api.Controllers;
 
 [ApiController]
-[Route("api/workspaces/{workspaceId:guid}/projects/{projectId:guid}/tasks")]
 [Authorize]
+[ApiVersion(1)]
+[ApiVersion(2)]
+[Route("api/v{version:apiVersion}/workspaces/{workspaceId:guid}/projects/{projectId:guid}/tasks")]
 public class ProjectTaskController(IProjectTaskService projectTaskService) : ControllerBase
 {
     private readonly IProjectTaskService _projectTaskService = projectTaskService;
@@ -42,7 +46,7 @@ public class ProjectTaskController(IProjectTaskService projectTaskService) : Con
 
         var response = await _projectTaskService.CreateAsync(model).ConfigureAwait(false);
 
-        return CreatedAtAction(nameof(GetByIdAsync), new { workspaceId, projectId, taskId = response.Id }, response);
+        return Created(new Uri($"/api/v1/workspaces/{workspaceId}/projects/{projectId}/tasks/{response.Id}", UriKind.Relative), response);
     }
 
     [HttpGet]
@@ -88,8 +92,6 @@ public class ProjectTaskController(IProjectTaskService projectTaskService) : Con
             OwnerId = ownerId
         };
 
-        ArgumentNullException.ThrowIfNull(model);
-
         var response = await _projectTaskService.GetByIdAsync(model).ConfigureAwait(false);
 
         return Ok(response);
@@ -126,7 +128,8 @@ public class ProjectTaskController(IProjectTaskService projectTaskService) : Con
     }
 
     [HttpDelete("{taskId:guid}")]
-    public async Task<IActionResult> DeleteAsync(Guid workspaceId, Guid projectId, Guid taskId)
+    [MapToApiVersion(1)]
+    public async Task<IActionResult> DeleteV1Async(Guid workspaceId, Guid projectId, Guid taskId)
     {
         var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
 
@@ -147,5 +150,33 @@ public class ProjectTaskController(IProjectTaskService projectTaskService) : Con
 
         return NoContent();
     }
+
+    [HttpDelete("{taskId:guid}")]
+    [MapToApiVersion(2)]
+    public async Task<IActionResult> DeleteV2Async(Guid workspaceId, Guid projectId, Guid taskId, [FromQuery] bool confirm)
+    {
+        if (confirm != true)
+        {
+            throw new ArgumentException("Confirmation is required to delete the project task.");
+        }
+
+        var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+        if (!Guid.TryParse(userIdClaim, out var ownerId))
+        {
+            return Unauthorized();
+        }
+
+        var model = new DeleteProjectTaskModel
+        {
+            WorkspaceId = workspaceId,
+            ProjectId = projectId,
+            ProjectTaskId = taskId,
+            OwnerId = ownerId
+        };
+
+        await _projectTaskService.DeleteAsync(model).ConfigureAwait(false);
+
+        return NoContent();
+    }
 }
-#pragma warning restore CA1515

@@ -1,5 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 
+using Asp.Versioning;
+
 using Jira.Application.Logging.DTOs;
 
 using Jira.Application.Logging.Interfaces;
@@ -7,7 +9,8 @@ using Jira.Application.Logging.Interfaces;
 namespace Jira.Api.Controllers;
 
 [ApiController]
-[Route("api/[controller]")]
+[ApiVersion(1)]
+[Route("api/v{version:apiVersion}/[controller]")]
 public class LogsController(ILogService logService) : ControllerBase
 {
     private readonly ILogService _logService = logService;
@@ -23,7 +26,7 @@ public class LogsController(ILogService logService) : ControllerBase
     }
 
     [HttpPost]
-    public async Task<IActionResult> SearchLogsAsync([FromBody] LogQueryRequest request)
+    public async Task<IActionResult> SearchLogsAsync(LogQueryRequest request)
     {
         ArgumentNullException.ThrowIfNull(request);
 

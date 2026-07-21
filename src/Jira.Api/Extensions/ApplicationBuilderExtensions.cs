@@ -1,11 +1,16 @@
 ﻿using System.Text;
 using System.Text.Json.Serialization;
 
+using FluentValidation;
+using FluentValidation.AspNetCore;
+
+using Jira.Application.ProjectTasks.Validators;
 using Jira.Api.ExceptionHandling;
 using Jira.Infrastructure;
 using Jira.Infrastructure.Authentication;
 
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Asp.Versioning;
 using Microsoft.IdentityModel.Tokens;
 
 namespace Jira.Api.Extensions;
@@ -18,10 +23,26 @@ internal static class ApplicationBuilderExtensions
         ArgumentNullException.ThrowIfNull(configuration);
 
         // Register Controllers
-        _ = services.AddControllers().AddJsonOptions(options =>
-                // Enum Serialization
-                options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter())
-        );
+        _ = services.AddControllers().AddJsonOptions(options => options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
+
+        // Register Fluent Validation
+        _ = services.AddFluentValidationAutoValidation(fv => fv.DisableDataAnnotationsValidation = true);
+
+        // Register Validators
+        _ = services.AddValidatorsFromAssemblyContaining<CreateProjectTaskRequestValidator>();
+
+        // Add Versioning
+        _ = services.AddApiVersioning(options =>
+            {
+                options.DefaultApiVersion = new ApiVersion(1);
+                options.AssumeDefaultVersionWhenUnspecified = true;
+                // options.ReportApiVersions = true;
+                options.ApiVersionReader = new UrlSegmentApiVersionReader();
+            }).AddApiExplorer(options =>
+            {
+                options.GroupNameFormat = "v";
+                options.SubstituteApiVersionInUrl = true;
+            });
 
         // HTTP Logging
         _ = services.AddHttpLogging();
