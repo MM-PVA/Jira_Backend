@@ -1,5 +1,7 @@
 ﻿using System.Security.Claims;
 
+using Asp.Versioning;
+
 using Jira.Application.Projects.DTOs;
 using Jira.Application.Projects.Interfaces;
 
@@ -9,7 +11,8 @@ using Microsoft.AspNetCore.Mvc;
 namespace Jira.Api.Controllers;
 
 [ApiController]
-[Route("api/workspaces/{workspaceId:guid}/projects")]
+[ApiVersion(1)]
+[Route("api/v{version:apiVersion}/workspaces/{workspaceId:guid}/projects")]
 [Authorize]
 public class ProjectController(IProjectService projectService) : ControllerBase
 {
@@ -29,7 +32,7 @@ public class ProjectController(IProjectService projectService) : ControllerBase
 
         var response = await _projectService.CreateAsync(workspaceId, ownerId, request).ConfigureAwait(false);
 
-        return CreatedAtAction(nameof(GetByIdAsync), new { workspaceId, projectId = response.Id }, response);
+        return Created(new Uri($"/api/v1/workspaces/{workspaceId}/projects/{response.Id}", UriKind.Relative), response);
     }
 
     [HttpGet]

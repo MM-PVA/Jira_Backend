@@ -1,5 +1,7 @@
 ﻿using System.Security.Claims;
 
+using Asp.Versioning;
+
 using Jira.Application.Workspaces.DTOs;
 using Jira.Application.Workspaces.Interfaces;
 
@@ -9,7 +11,8 @@ using Microsoft.AspNetCore.Mvc;
 namespace Jira.Api.Controllers;
 
 [ApiController]
-[Route("api/[controller]")]
+[ApiVersion(1)]
+[Route("api/v{version:apiVersion}/[controller]")]
 [Authorize]
 public class WorkspaceController(IWorkspaceService workspaceService) : ControllerBase
 {
@@ -29,7 +32,7 @@ public class WorkspaceController(IWorkspaceService workspaceService) : Controlle
 
         var response = await _workspaceService.CreateAsync(ownerId, request).ConfigureAwait(false);
 
-        return CreatedAtAction(nameof(GetByIdAsync), new { id = response.Id }, response);
+        return Created(new Uri($"/api/v1/workspace/{response.Id}", UriKind.Relative), response);
     }
 
     [HttpGet]

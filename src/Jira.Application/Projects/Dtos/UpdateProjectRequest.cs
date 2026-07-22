@@ -1,10 +1,10 @@
-namespace Jira.Application.Projects.DTOs;
+﻿namespace Jira.Application.Projects.DTOs;
 
 public class UpdateProjectRequest
 {
-    public string Name { get; set; } = string.Empty;
+    public required string Name { get; set; }
 
-    public string Description { get; set; } = string.Empty;
+    public required string Description { get; set; }
 
-    public string Status { get; set; } = string.Empty;
+    public required string Status { get; set; }
 }

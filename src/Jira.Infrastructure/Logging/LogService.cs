@@ -15,6 +15,8 @@ public class LogService : ILogService
         // Validate the request object is not null
         ArgumentNullException.ThrowIfNull(request);
 
+        Console.WriteLine($"LogService.GetLogsAsync called with request: {JsonSerializer.Serialize(request)}");
+
         var filePath = Path.Combine(_logFilePath, $"{DateTime.UtcNow:yyyy-MM-dd}.jsonl");
 
         var lines = await File.ReadAllLinesAsync(filePath).ConfigureAwait(false);

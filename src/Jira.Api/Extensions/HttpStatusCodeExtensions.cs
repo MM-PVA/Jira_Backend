@@ -1,6 +1,6 @@
-namespace Jira.Api.Extensions;
+﻿namespace Jira.Api.Extensions;
 
-public static class HttpStatusCodeExtensions
+internal static class HttpStatusCodeExtensions
 {
     public static LogLevel GetLogLevel(this int statusCode)
     {

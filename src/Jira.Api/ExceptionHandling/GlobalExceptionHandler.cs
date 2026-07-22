@@ -1,11 +1,11 @@
 ﻿using Jira.Domain.Exceptions;
+using Jira.Application.AppErrors;
 
 using Microsoft.AspNetCore.Diagnostics;
-using Microsoft.AspNetCore.Mvc;
 
 namespace Jira.Api.ExceptionHandling;
 
-public sealed class GlobalExceptionHandler : IExceptionHandler
+public class GlobalExceptionHandler : IExceptionHandler
 {
     public async ValueTask<bool> TryHandleAsync(
         HttpContext httpContext,
@@ -18,21 +18,25 @@ public sealed class GlobalExceptionHandler : IExceptionHandler
         var (statusCode, title) = exception switch
         {
             ConflictException => (409, "Conflict"),
-            UnauthorizedException => (401, "Unauthorized"),
             NotFoundException => (404, "Not Found"),
+            UnauthorizedException => (401, "Unauthorized"),
             _ => (500, "Internal Server Error")
         };
 
-        httpContext.Response.StatusCode = statusCode;
+        var errorCode = exception is AppException appException ? appException.ErrorCode : 5000;
 
-        await httpContext.Response.WriteAsJsonAsync(new ProblemDetails
-        {
-            Status = statusCode,
-            Title = title,
-            Detail = exception.Message,
-            Instance = httpContext.Request.Path
-        }, cancellationToken)
-        .ConfigureAwait(false);
+        var response = new ErrorResponse(
+            Status: statusCode,
+            Code: errorCode,
+            Title: title,
+            Message: exception.Message,
+            TraceId: httpContext.TraceIdentifier
+        );
+
+        httpContext.Response.StatusCode = statusCode;
+        httpContext.Response.ContentType = "application/json";
+
+        await httpContext.Response.WriteAsJsonAsync(response, cancellationToken).ConfigureAwait(false);
 
         return true;
     }

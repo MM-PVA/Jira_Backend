@@ -1,0 +1,10 @@
+CA1032 (Custom Exceptions) => Their is a standard exception constructors that we need to use.
+CA2227 (Collection Properties) => Set [] instead of new List<> in Entities;
+CA1002 => Use IReadOnlyCollection instead of normal List in DTOs.
+CA1062 => Validate first imcoming request is not null.
+CA1062 => Add .ConfigureAwait(false) in async processes.
+CA1506 => Avoid excessive class coupling, a class depends on too many other types.
+CA1707 => Identifiers should not contain underscores.
+
+CA1515 => Consider making public types internal, In executable applications, public types should be internal unless they are part of a public API.
+NU1903 => High severity package vulnerability detected.

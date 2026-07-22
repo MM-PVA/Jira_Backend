@@ -1,12 +1,12 @@
-namespace Jira.Application.Authentication.DTOs;
+﻿namespace Jira.Application.Authentication.DTOs;
 
 public class CurrentUserResponse
 {
     public Guid Id { get; set; }
 
-    public string FirstName { get; set; } = string.Empty;
+    public required string FirstName { get; set; }
 
-    public string LastName { get; set; } = string.Empty;
+    public required string LastName { get; set; }
 
-    public string Email { get; set; } = string.Empty;
+    public required string Email { get; set; }
 }
