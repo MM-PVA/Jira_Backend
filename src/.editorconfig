@@ -755,7 +755,7 @@ dotnet_diagnostic.CA1846.severity = warning
 dotnet_diagnostic.CA1847.severity = warning
 
 # CA1848: Use the LoggerMessage delegates
-dotnet_diagnostic.CA1848.severity = none
+dotnet_diagnostic.CA1848.severity = warning
 
 # CA1849: Call async methods when in an async method
 dotnet_diagnostic.CA1849.severity = warning
