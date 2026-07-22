@@ -18,9 +18,7 @@ namespace Jira.Infrastructure;
 public static class InfrastructureRegistration
 {
     // IServiceCollection is a list of service registrations.
-    public static IServiceCollection AddInfrastructure(
-        this IServiceCollection services,
-        IConfiguration configuration)
+    public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
     {
         ArgumentNullException.ThrowIfNull(configuration);
 
@@ -28,6 +26,8 @@ public static class InfrastructureRegistration
         services.AddDbContext<AppDbContext>(options => options.UseSqlite(configuration.GetConnectionString("DefaultConnection")));
 
         services.Configure<JwtSettings>(configuration.GetSection(JwtSettings.SectionName));
+
+        services.Configure<LoggingSettings>(configuration.GetSection(LoggingSettings.SectionName));
 
         services.AddScoped<IAuthService, AuthService>();
         services.AddScoped<ITokenService, TokenService>();

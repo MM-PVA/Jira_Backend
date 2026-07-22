@@ -2,15 +2,18 @@
 using Jira.Api.Extensions;
 using Jira.Application.Logging.Models;
 using System.Text.Json;
+using Jira.Infrastructure.Logging;
+
+using Microsoft.Extensions.Options;
 
 namespace Jira.Api.Middleware;
 
-public sealed class RequestResponseLoggingMiddleware(RequestDelegate next, ILogger<RequestResponseLoggingMiddleware> logger)
+public sealed class RequestResponseLoggingMiddleware(RequestDelegate next, ILogger<RequestResponseLoggingMiddleware> logger, IOptions<LoggingSettings> loggingSettings)
 {
     private readonly RequestDelegate _next = next;
     private readonly ILogger<RequestResponseLoggingMiddleware> _logger = logger;
 
-    private readonly string _logFilePath = "C:/Users/PValiya/Jira/Logs";
+    private readonly string _logFilePath = loggingSettings.Value.LogDirectory;
 
     public async Task InvokeAsync(HttpContext context)
     {

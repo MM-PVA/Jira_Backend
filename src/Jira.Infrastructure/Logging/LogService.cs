@@ -4,20 +4,25 @@ using Jira.Application.Logging.Interfaces;
 using Jira.Application.Logging.Models;
 using Jira.Application.Logging.DTOs;
 
+using Microsoft.Extensions.Options;
+
 namespace Jira.Infrastructure.Logging;
 
-public class LogService : ILogService
+public class LogService(IOptions<LoggingSettings> loggingSettings) : ILogService
 {
-    private readonly string _logFilePath = "C:/Users/PValiya/Jira/Logs";
+    private readonly string _logFilePath = loggingSettings.Value.LogDirectory;
 
     public async Task<PagedLogResponse> GetLogsAsync(LogQueryRequest request)
     {
         // Validate the request object is not null
         ArgumentNullException.ThrowIfNull(request);
 
-        Console.WriteLine($"LogService.GetLogsAsync called with request: {JsonSerializer.Serialize(request)}");
-
         var filePath = Path.Combine(_logFilePath, $"{DateTime.UtcNow:yyyy-MM-dd}.jsonl");
+
+        if (!File.Exists(filePath))
+        {
+            throw new FileNotFoundException($"Log File : {filePath} not found.");
+        }
 
         var lines = await File.ReadAllLinesAsync(filePath).ConfigureAwait(false);
 
@@ -82,6 +87,11 @@ public class LogService : ILogService
     public async Task<List<LogGroupByIpResponse>> GroupByIpAsync(int? threshold)
     {
         var filePath = Path.Combine(_logFilePath, $"{DateTime.UtcNow:yyyy-MM-dd}.jsonl");
+
+        if (!File.Exists(filePath))
+        {
+            throw new FileNotFoundException($"Log File : {filePath} not found.");
+        }
 
         var lines = await File.ReadAllLinesAsync(filePath).ConfigureAwait(false);
 
