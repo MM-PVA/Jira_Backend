@@ -593,7 +593,7 @@ dotnet_diagnostic.CA1515.severity = warning
 dotnet_diagnostic.CA1700.severity = warning
 
 # CA1707: Identifiers should not contain underscores
-dotnet_diagnostic.CA1707.severity = warning
+dotnet_diagnostic.CA1707.severity = none
 
 # CA1708: Identifiers should differ by more than case
 dotnet_diagnostic.CA1708.severity = warning
@@ -755,7 +755,7 @@ dotnet_diagnostic.CA1846.severity = warning
 dotnet_diagnostic.CA1847.severity = warning
 
 # CA1848: Use the LoggerMessage delegates
-dotnet_diagnostic.CA1848.severity = none
+dotnet_diagnostic.CA1848.severity = warning
 
 # CA1849: Call async methods when in an async method
 dotnet_diagnostic.CA1849.severity = warning
