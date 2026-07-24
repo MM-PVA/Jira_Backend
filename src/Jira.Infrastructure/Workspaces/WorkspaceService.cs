@@ -1,8 +1,8 @@
 ﻿using Jira.Application.Workspaces.DTOs;
 using Jira.Application.Workspaces.Interfaces;
-using Jira.Infrastructure.Persistence;
 using Jira.Domain.Entities;
 using Jira.Domain.Exceptions;
+using Jira.Infrastructure.Persistence;
 
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -14,114 +14,151 @@ public class WorkspaceService(AppDbContext context, ILogger<WorkspaceService> lo
     private readonly AppDbContext _context = context;
     private readonly ILogger<WorkspaceService> _logger = logger;
 
-    public async Task<WorkspaceResponse> CreateAsync(Guid ownerId, CreateWorkspaceRequest request)
+    public async Task<WorkspaceResponse> CreateAsync(Guid ownerId, CreateWorkspaceRequest request, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(request);
 
-        var workspace = new Workspace
+        try
         {
-            Name = request.Name,
-            Description = request.Description,
-            OwnerId = ownerId,
-            UpdatedAt = DateTime.UtcNow
-        };
+            var workspace = new Workspace
+            {
+                Name = request.Name,
+                Description = request.Description,
+                OwnerId = ownerId,
+                UpdatedAt = DateTime.UtcNow
+            };
 
-        _context.Workspaces.Add(workspace);
+            _context.Workspaces.Add(workspace);
 
-        await _context.SaveChangesAsync().ConfigureAwait(false);
+            await _context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
-        _logger.LogInformation("Workspace created successfully with ID: {WorkspaceId}", workspace.Id);
+            _logger.LogInformation("Workspace created successfully with ID: {WorkspaceId}", workspace.Id);
 
-        return new WorkspaceResponse
-        {
-            Id = workspace.Id,
-            Name = workspace.Name,
-            Description = workspace.Description,
-            OwnerId = workspace.OwnerId,
-        };
-    }
-
-    public async Task<IEnumerable<WorkspaceResponse>> GetAllAsync(Guid ownerId)
-    {
-        return await _context.Workspaces
-        .Where(workspace => workspace.OwnerId == ownerId)
-        .Select(workspace => new WorkspaceResponse
-        {
-            Id = workspace.Id,
-            Name = workspace.Name,
-            Description = workspace.Description,
-            OwnerId = workspace.OwnerId
-        })
-        .ToListAsync() // this line will execute the query and return the results as a list
-        .ConfigureAwait(false);
-    }
-
-    public async Task<WorkspaceResponse> GetByIdAsync(Guid workspaceId, Guid ownerId)
-    {
-        var workspace = await _context.Workspaces.FirstOrDefaultAsync(workspace =>
-            workspace.Id == workspaceId && workspace.OwnerId == ownerId).ConfigureAwait(false);
-
-        if (workspace is null)
-        {
-            _logger.LogWarning("Attempt to get non-existent workspace: {WorkspaceId}", workspaceId);
-            throw new NotFoundException("Workspace not found.");
+            return new WorkspaceResponse
+            {
+                Id = workspace.Id,
+                Name = workspace.Name,
+                Description = workspace.Description,
+                OwnerId = workspace.OwnerId
+            };
         }
-
-        _logger.LogInformation("Workspace retrieved successfully with ID: {WorkspaceId}", workspace.Id);
-
-        return new WorkspaceResponse
+        catch (OperationCanceledException)
         {
-            Id = workspace.Id,
-            Name = workspace.Name,
-            Description = workspace.Description,
-            OwnerId = workspace.OwnerId
-        };
+            _logger.LogWarning("Create workspace request cancelled. OwnerId: {OwnerId}", ownerId);
+            throw;
+        }
     }
 
-    public async Task<WorkspaceResponse> UpdateAsync(Guid workspaceId, Guid ownerId, UpdateWorkspaceRequest request)
+    public async Task<IEnumerable<WorkspaceResponse>> GetAllAsync(Guid ownerId, CancellationToken cancellationToken)
+    {
+        try
+        {
+            return await _context.Workspaces.Where(workspace => workspace.OwnerId == ownerId)
+                .Select(workspace => new WorkspaceResponse
+                {
+                    Id = workspace.Id,
+                    Name = workspace.Name,
+                    Description = workspace.Description,
+                    OwnerId = workspace.OwnerId
+                })
+                .ToListAsync(cancellationToken)
+                .ConfigureAwait(false);
+        }
+        catch (OperationCanceledException)
+        {
+            _logger.LogWarning("Get all workspaces request cancelled. OwnerId: {OwnerId}", ownerId);
+            throw;
+        }
+    }
+
+    public async Task<WorkspaceResponse> GetByIdAsync(Guid workspaceId, Guid ownerId, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var workspace = await _context.Workspaces.FirstOrDefaultAsync(workspace => workspace.Id == workspaceId && workspace.OwnerId == ownerId, cancellationToken).ConfigureAwait(false);
+
+            if (workspace is null)
+            {
+                _logger.LogWarning("Attempt to get non-existent workspace: {WorkspaceId}", workspaceId);
+                throw new NotFoundException("Workspace not found.");
+            }
+
+            _logger.LogInformation("Workspace retrieved successfully with ID: {WorkspaceId}", workspace.Id);
+
+            return new WorkspaceResponse
+            {
+                Id = workspace.Id,
+                Name = workspace.Name,
+                Description = workspace.Description,
+                OwnerId = workspace.OwnerId
+            };
+        }
+        catch (OperationCanceledException)
+        {
+            _logger.LogWarning("Get workspace request cancelled. WorkspaceId: {WorkspaceId}", workspaceId);
+            throw;
+        }
+    }
+
+    public async Task<WorkspaceResponse> UpdateAsync(Guid workspaceId, Guid ownerId, UpdateWorkspaceRequest request, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(request);
 
-        var workspace = await _context.Workspaces.FirstOrDefaultAsync(workspace =>
-           workspace.Id == workspaceId && workspace.OwnerId == ownerId).ConfigureAwait(false);
-
-        if (workspace is null)
+        try
         {
-            _logger.LogWarning("Attempt to update non-existent workspace: {WorkspaceId}", workspaceId);
-            throw new NotFoundException("Workspace not found.");
+            var workspace = await _context.Workspaces.FirstOrDefaultAsync(workspace => workspace.Id == workspaceId && workspace.OwnerId == ownerId, cancellationToken).ConfigureAwait(false);
+
+            if (workspace is null)
+            {
+                _logger.LogWarning("Attempt to update non-existent workspace: {WorkspaceId}", workspaceId);
+                throw new NotFoundException("Workspace not found.");
+            }
+
+            workspace.Name = request.Name;
+            workspace.Description = request.Description;
+            workspace.UpdatedAt = DateTime.UtcNow;
+
+            await _context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+            _logger.LogInformation("Workspace updated successfully with ID: {WorkspaceId}", workspace.Id);
+
+            return new WorkspaceResponse
+            {
+                Id = workspace.Id,
+                Name = workspace.Name,
+                Description = workspace.Description,
+                OwnerId = workspace.OwnerId
+            };
         }
-
-        workspace.Name = request.Name;
-        workspace.Description = request.Description;
-        workspace.UpdatedAt = DateTime.UtcNow;
-
-        await _context.SaveChangesAsync().ConfigureAwait(false);
-
-        _logger.LogInformation("Workspace updated successfully with ID: {WorkspaceId}", workspace.Id);
-
-        return new WorkspaceResponse
+        catch (OperationCanceledException)
         {
-            Id = workspace.Id,
-            Name = workspace.Name,
-            Description = workspace.Description,
-            OwnerId = workspace.OwnerId
-        };
+            _logger.LogWarning("Update workspace request cancelled. WorkspaceId: {WorkspaceId}", workspaceId);
+            throw;
+        }
     }
 
-    public async Task DeleteAsync(Guid workspaceId, Guid ownerId)
+    public async Task DeleteAsync(Guid workspaceId, Guid ownerId, CancellationToken cancellationToken)
     {
-        var workspace = await _context.Workspaces.FirstOrDefaultAsync(workspace =>
-            workspace.Id == workspaceId && workspace.OwnerId == ownerId).ConfigureAwait(false);
-
-        if (workspace is null)
+        try
         {
-            _logger.LogWarning("Attempt to delete non-existent workspace: {WorkspaceId}", workspaceId);
-            throw new NotFoundException("Workspace not found.");
+            var workspace = await _context.Workspaces.FirstOrDefaultAsync(workspace => workspace.Id == workspaceId && workspace.OwnerId == ownerId, cancellationToken).ConfigureAwait(false);
+
+            if (workspace is null)
+            {
+                _logger.LogWarning("Attempt to delete non-existent workspace: {WorkspaceId}", workspaceId);
+                throw new NotFoundException("Workspace not found.");
+            }
+
+            _context.Workspaces.Remove(workspace);
+
+            _logger.LogInformation("Workspace deleted successfully with ID: {WorkspaceId}", workspace.Id);
+
+            await _context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
         }
-
-        _context.Workspaces.Remove(workspace);
-        _logger.LogInformation("Workspace deleted successfully with ID: {WorkspaceId}", workspace.Id);
-
-        await _context.SaveChangesAsync().ConfigureAwait(false);
+        catch (OperationCanceledException)
+        {
+            _logger.LogWarning("Delete workspace request cancelled. WorkspaceId: {WorkspaceId}", workspaceId);
+            throw;
+        }
     }
 }

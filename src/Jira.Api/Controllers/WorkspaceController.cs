@@ -19,7 +19,7 @@ public class WorkspaceController(IWorkspaceService workspaceService) : Controlle
     private readonly IWorkspaceService _workspaceService = workspaceService;
 
     [HttpPost]
-    public async Task<IActionResult> CreateAsync(CreateWorkspaceRequest request)
+    public async Task<IActionResult> CreateAsync(CreateWorkspaceRequest request, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(request);
 
@@ -30,13 +30,13 @@ public class WorkspaceController(IWorkspaceService workspaceService) : Controlle
             return Unauthorized();
         }
 
-        var response = await _workspaceService.CreateAsync(ownerId, request).ConfigureAwait(false);
+        var response = await _workspaceService.CreateAsync(ownerId, request, cancellationToken).ConfigureAwait(false);
 
         return Created(new Uri($"/api/v1/workspace/{response.Id}", UriKind.Relative), response);
     }
 
     [HttpGet]
-    public async Task<IActionResult> GetAllAsync()
+    public async Task<IActionResult> GetAllAsync(CancellationToken cancellationToken)
     {
         var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
 
@@ -45,13 +45,13 @@ public class WorkspaceController(IWorkspaceService workspaceService) : Controlle
             return Unauthorized();
         }
 
-        var response = await _workspaceService.GetAllAsync(ownerId).ConfigureAwait(false);
+        var response = await _workspaceService.GetAllAsync(ownerId, cancellationToken).ConfigureAwait(false);
 
         return Ok(response);
     }
 
     [HttpGet("{id:guid}")]
-    public async Task<IActionResult> GetByIdAsync(Guid id)
+    public async Task<IActionResult> GetByIdAsync(Guid id, CancellationToken cancellationToken)
     {
         var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
 
@@ -60,13 +60,13 @@ public class WorkspaceController(IWorkspaceService workspaceService) : Controlle
             return Unauthorized();
         }
 
-        var response = await _workspaceService.GetByIdAsync(id, ownerId).ConfigureAwait(false);
+        var response = await _workspaceService.GetByIdAsync(id, ownerId, cancellationToken).ConfigureAwait(false);
 
         return Ok(response);
     }
 
     [HttpPut("{id:guid}")]
-    public async Task<IActionResult> UpdateAsync(Guid id, UpdateWorkspaceRequest request)
+    public async Task<IActionResult> UpdateAsync(Guid id, UpdateWorkspaceRequest request, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(request);
 
@@ -77,13 +77,13 @@ public class WorkspaceController(IWorkspaceService workspaceService) : Controlle
             return Unauthorized();
         }
 
-        var response = await _workspaceService.UpdateAsync(id, ownerId, request).ConfigureAwait(false);
+        var response = await _workspaceService.UpdateAsync(id, ownerId, request, cancellationToken).ConfigureAwait(false);
 
         return Ok(response);
     }
 
     [HttpDelete("{id:guid}")]
-    public async Task<IActionResult> DeleteAsync(Guid id)
+    public async Task<IActionResult> DeleteAsync(Guid id, CancellationToken cancellationToken)
     {
         var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
 
@@ -92,7 +92,7 @@ public class WorkspaceController(IWorkspaceService workspaceService) : Controlle
             return Unauthorized();
         }
 
-        await _workspaceService.DeleteAsync(id, ownerId).ConfigureAwait(false);
+        await _workspaceService.DeleteAsync(id, ownerId, cancellationToken).ConfigureAwait(false);
 
         return NoContent();
     }

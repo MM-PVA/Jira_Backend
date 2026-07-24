@@ -18,28 +18,28 @@ public class AuthController(IAuthService authService) : ControllerBase
     private readonly IAuthService _authService = authService;
 
     [HttpPost("register")]
-    public async Task<IActionResult> RegisterAsync(RegisterRequest request)
+    public async Task<IActionResult> RegisterAsync(RegisterRequest request, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(request);
 
-        var response = await _authService.RegisterAsync(request).ConfigureAwait(false);
+        var response = await _authService.RegisterAsync(request, cancellationToken).ConfigureAwait(false);
 
         return CreatedAtAction(nameof(GetCurrentUserAsync), response);
     }
 
     [HttpPost("login")]
-    public async Task<IActionResult> LoginAsync(LoginRequest request)
+    public async Task<IActionResult> LoginAsync(LoginRequest request, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(request);
 
-        var response = await _authService.LoginAsync(request).ConfigureAwait(false);
+        var response = await _authService.LoginAsync(request, cancellationToken).ConfigureAwait(false);
 
         return Ok(response);
     }
 
     [Authorize]
     [HttpGet("me")]
-    public async Task<IActionResult> GetCurrentUserAsync()
+    public async Task<IActionResult> GetCurrentUserAsync(CancellationToken cancellationToken)
     {
         var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
 
@@ -48,7 +48,7 @@ public class AuthController(IAuthService authService) : ControllerBase
             return Unauthorized();
         }
 
-        var response = await _authService.GetCurrentUserAsync(userId).ConfigureAwait(false);
+        var response = await _authService.GetCurrentUserAsync(userId, cancellationToken).ConfigureAwait(false);
 
         return Ok(response);
     }

@@ -21,7 +21,7 @@ public class ProjectTaskController(IProjectTaskService projectTaskService) : Con
     private readonly IProjectTaskService _projectTaskService = projectTaskService;
 
     [HttpPost]
-    public async Task<IActionResult> CreateAsync(Guid workspaceId, Guid projectId, CreateProjectTaskRequest request)
+    public async Task<IActionResult> CreateAsync(Guid workspaceId, Guid projectId, CreateProjectTaskRequest request, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(request);
 
@@ -44,13 +44,13 @@ public class ProjectTaskController(IProjectTaskService projectTaskService) : Con
             DueDate = request.DueDate
         };
 
-        var response = await _projectTaskService.CreateAsync(model).ConfigureAwait(false);
+        var response = await _projectTaskService.CreateAsync(model, cancellationToken).ConfigureAwait(false);
 
         return Created(new Uri($"/api/v1/workspaces/{workspaceId}/projects/{projectId}/tasks/{response.Id}", UriKind.Relative), response);
     }
 
     [HttpGet]
-    public async Task<IActionResult> GetAllAsync(Guid workspaceId, Guid projectId, [FromQuery] GetProjectTasksRequest request)
+    public async Task<IActionResult> GetAllAsync(Guid workspaceId, Guid projectId, [FromQuery] GetProjectTasksRequest request, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(request);
 
@@ -69,13 +69,13 @@ public class ProjectTaskController(IProjectTaskService projectTaskService) : Con
             Search = request.Search
         };
 
-        var response = await _projectTaskService.GetAllAsync(model).ConfigureAwait(false);
+        var response = await _projectTaskService.GetAllAsync(model, cancellationToken).ConfigureAwait(false);
 
         return Ok(response);
     }
 
     [HttpGet("{taskId:guid}")]
-    public async Task<IActionResult> GetByIdAsync(Guid workspaceId, Guid projectId, Guid taskId)
+    public async Task<IActionResult> GetByIdAsync(Guid workspaceId, Guid projectId, Guid taskId, CancellationToken cancellationToken)
     {
         var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
 
@@ -92,13 +92,13 @@ public class ProjectTaskController(IProjectTaskService projectTaskService) : Con
             OwnerId = ownerId
         };
 
-        var response = await _projectTaskService.GetByIdAsync(model).ConfigureAwait(false);
+        var response = await _projectTaskService.GetByIdAsync(model, cancellationToken).ConfigureAwait(false);
 
         return Ok(response);
     }
 
     [HttpPut("{taskId:guid}")]
-    public async Task<IActionResult> UpdateAsync(Guid workspaceId, Guid projectId, Guid taskId, UpdateProjectTaskRequest request)
+    public async Task<IActionResult> UpdateAsync(Guid workspaceId, Guid projectId, Guid taskId, UpdateProjectTaskRequest request, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(request);
 
@@ -122,14 +122,14 @@ public class ProjectTaskController(IProjectTaskService projectTaskService) : Con
             DueDate = request.DueDate
         };
 
-        var response = await _projectTaskService.UpdateAsync(model).ConfigureAwait(false);
+        var response = await _projectTaskService.UpdateAsync(model, cancellationToken).ConfigureAwait(false);
 
         return Ok(response);
     }
 
     [HttpDelete("{taskId:guid}")]
     [MapToApiVersion(1)]
-    public async Task<IActionResult> DeleteV1Async(Guid workspaceId, Guid projectId, Guid taskId)
+    public async Task<IActionResult> DeleteV1Async(Guid workspaceId, Guid projectId, Guid taskId, CancellationToken cancellationToken)
     {
         var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
 
@@ -146,14 +146,14 @@ public class ProjectTaskController(IProjectTaskService projectTaskService) : Con
             OwnerId = ownerId
         };
 
-        await _projectTaskService.DeleteAsync(model).ConfigureAwait(false);
+        await _projectTaskService.DeleteAsync(model, cancellationToken).ConfigureAwait(false);
 
         return NoContent();
     }
 
     [HttpDelete("{taskId:guid}")]
     [MapToApiVersion(2)]
-    public async Task<IActionResult> DeleteV2Async(Guid workspaceId, Guid projectId, Guid taskId, [FromQuery] bool confirm)
+    public async Task<IActionResult> DeleteV2Async(Guid workspaceId, Guid projectId, Guid taskId, [FromQuery] bool confirm, CancellationToken cancellationToken)
     {
         if (confirm != true)
         {
@@ -175,7 +175,7 @@ public class ProjectTaskController(IProjectTaskService projectTaskService) : Con
             OwnerId = ownerId
         };
 
-        await _projectTaskService.DeleteAsync(model).ConfigureAwait(false);
+        await _projectTaskService.DeleteAsync(model, cancellationToken).ConfigureAwait(false);
 
         return NoContent();
     }

@@ -1,12 +1,12 @@
-using Jira.Application.Authentication.DTOs;
+﻿using Jira.Application.Authentication.DTOs;
 
 namespace Jira.Application.Authentication.Interfaces;
 
 public interface IAuthService
 {
-    Task<RegisterResponse> RegisterAsync(RegisterRequest request);
+    Task<RegisterResponse> RegisterAsync(RegisterRequest request, CancellationToken cancellationToken);
 
-    Task<LoginResponse> LoginAsync(LoginRequest request);
+    Task<LoginResponse> LoginAsync(LoginRequest request, CancellationToken cancellationToken);
 
-    Task<CurrentUserResponse> GetCurrentUserAsync(Guid userId);
+    Task<CurrentUserResponse> GetCurrentUserAsync(Guid userId, CancellationToken cancellationToken);
 }

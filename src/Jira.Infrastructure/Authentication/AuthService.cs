@@ -10,104 +10,116 @@ using Microsoft.Extensions.Logging;
 
 namespace Jira.Infrastructure.Authentication;
 
-public class AuthService : IAuthService
+public class AuthService(AppDbContext context, ITokenService tokenService, ILogger<AuthService> logger) : IAuthService
 {
-    private readonly AppDbContext _context;
-    private readonly PasswordHasher<User> _passwordHasher;
-    private readonly ITokenService _tokenService;
-    private readonly ILogger<AuthService> _logger;
+    private readonly AppDbContext _context = context;
+    private readonly PasswordHasher<User> _passwordHasher = new();
+    private readonly ITokenService _tokenService = tokenService;
+    private readonly ILogger<AuthService> _logger = logger;
 
-    public AuthService(AppDbContext context, ITokenService tokenService, ILogger<AuthService> logger)
-    {
-        _context = context;
-        _passwordHasher = new PasswordHasher<User>();
-        _tokenService = tokenService;
-        _logger = logger;
-    }
-
-    public async Task<RegisterResponse> RegisterAsync(RegisterRequest request)
+    public async Task<RegisterResponse> RegisterAsync(RegisterRequest request, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(request);
 
-        var existingUser = await _context.Users
-            .FirstOrDefaultAsync(x => x.Email == request.Email).ConfigureAwait(false);
-
-        if (existingUser != null)
+        try
         {
-            _logger.LogWarning("Attempt to register with an existing email: {Email}", request.Email);
-            throw new ConflictException("Email already exists.");
+            var existingUser = await _context.Users.FirstOrDefaultAsync(x => x.Email == request.Email, cancellationToken).ConfigureAwait(false);
+
+            if (existingUser != null)
+            {
+                _logger.LogWarning("Attempt to register with an existing email: {Email}", request.Email);
+                throw new ConflictException("Email already exists.");
+            }
+
+            var user = new User
+            {
+                FirstName = request.FirstName,
+                LastName = request.LastName,
+                Email = request.Email
+            };
+
+            user.PasswordHash = _passwordHasher.HashPassword(user, request.Password);
+
+            _context.Users.Add(user);
+
+            await _context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+            return new RegisterResponse
+            {
+                UserId = user.Id,
+                Message = "User registered successfully."
+            };
         }
-
-        var user = new User
+        catch (OperationCanceledException)
         {
-            FirstName = request.FirstName,
-            LastName = request.LastName,
-            Email = request.Email
-        };
-
-        user.PasswordHash = _passwordHasher.HashPassword(user, request.Password);
-
-        _context.Users.Add(user);
-
-        await _context.SaveChangesAsync().ConfigureAwait(false);
-
-        _logger.LogInformation("User registered successfully with email: {Email}", request.Email);
-
-        return new RegisterResponse
-        {
-            UserId = user.Id,
-            Message = "User registered successfully."
-        };
+            _logger.LogWarning("Registration request cancelled by {Email}", request.Email);
+            throw;
+        }
     }
 
-    public async Task<LoginResponse> LoginAsync(LoginRequest request)
+    public async Task<LoginResponse> LoginAsync(LoginRequest request, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(request);
 
-        var user = await _context.Users
-            .FirstOrDefaultAsync(x => x.Email == request.Email).ConfigureAwait(false);
+        _logger.LogInformation("Login request received from {Email}", request.Email);
 
-        if (user == null)
+        try
         {
-            _logger.LogWarning("Login attempt failed for non-existent email: {Email}", request.Email);
-            throw new UnauthorizedException("Invalid email or password.");
+            var user = await _context.Users.FirstOrDefaultAsync(x => x.Email == request.Email, cancellationToken).ConfigureAwait(false);
+
+            if (user == null)
+            {
+                throw new UnauthorizedException("Invalid email or password.");
+            }
+
+            var result = _passwordHasher.VerifyHashedPassword(user, user.PasswordHash, request.Password);
+
+            if (result == PasswordVerificationResult.Failed)
+            {
+                throw new UnauthorizedException("Invalid email or password.");
+            }
+
+            var (accessToken, expiresAtUtc) = _tokenService.GenerateToken(user);
+
+            return new LoginResponse
+            {
+                AccessToken = accessToken,
+                ExpiresAtUtc = expiresAtUtc
+            };
         }
-
-        var result = _passwordHasher.VerifyHashedPassword(user, user.PasswordHash, request.Password);
-
-        if (result == PasswordVerificationResult.Failed)
+        catch (OperationCanceledException)
         {
-            _logger.LogWarning("Failed login attempt for email: {Email}", request.Email);
-            throw new UnauthorizedException("Invalid email or password.");
+            _logger.LogWarning("Login request cancelled by {Email}", request.Email);
+            throw;
         }
-
-        var (accessToken, expiresAtUtc) = _tokenService.GenerateToken(user);
-
-        return new LoginResponse
-        {
-            AccessToken = accessToken,
-            ExpiresAtUtc = expiresAtUtc
-        };
     }
 
-    public async Task<CurrentUserResponse> GetCurrentUserAsync(Guid userId)
+    public async Task<CurrentUserResponse> GetCurrentUserAsync(Guid userId, CancellationToken cancellationToken)
     {
-        var user = await _context.Users.FindAsync(userId).ConfigureAwait(false);
-
-        if (user == null)
+        try
         {
-            _logger.LogWarning("Attempt to get non-existent user with ID: {UserId}", userId);
-            throw new NotFoundException("User not found.");
+            var user = await _context.Users.FindAsync([userId], cancellationToken).ConfigureAwait(false);
+
+            if (user == null)
+            {
+                _logger.LogWarning("Attempt to get non-existent user with ID: {UserId}", userId);
+                throw new NotFoundException("User not found.");
+            }
+
+            _logger.LogInformation("Current user retrieved successfully with ID: {UserId}", userId);
+
+            return new CurrentUserResponse
+            {
+                Id = user.Id,
+                FirstName = user.FirstName,
+                LastName = user.LastName,
+                Email = user.Email
+            };
         }
-
-        _logger.LogInformation("Current user retrieved successfully with ID: {UserId}", userId);
-
-        return new CurrentUserResponse
+        catch (OperationCanceledException)
         {
-            Id = user.Id,
-            FirstName = user.FirstName,
-            LastName = user.LastName,
-            Email = user.Email
-        };
+            _logger.LogWarning("GetCurrentUser request cancelled by user ID: {UserId}", userId);
+            throw;
+        }
     }
 }

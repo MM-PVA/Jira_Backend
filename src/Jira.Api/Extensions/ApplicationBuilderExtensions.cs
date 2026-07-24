@@ -1,5 +1,4 @@
-﻿using System.Text;
-using System.Text.Json.Serialization;
+﻿using System.Text.Json.Serialization;
 
 using FluentValidation;
 using FluentValidation.AspNetCore;
@@ -7,11 +6,8 @@ using FluentValidation.AspNetCore;
 using Jira.Application.ProjectTasks.Validators;
 using Jira.Api.ExceptionHandling;
 using Jira.Infrastructure;
-using Jira.Infrastructure.Authentication;
 
-using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Asp.Versioning;
-using Microsoft.IdentityModel.Tokens;
 
 namespace Jira.Api.Extensions;
 
@@ -56,24 +52,7 @@ internal static class ApplicationBuilderExtensions
         // Register Problem Details
         _ = services.AddProblemDetails();
 
-        // JWT Authentication
-        var jwtSettings = configuration.GetSection(JwtSettings.SectionName).Get<JwtSettings>() ?? throw new InvalidOperationException("Jwt settings are not configured.");
-
-        _ = services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer(options =>
-            {
-                options.TokenValidationParameters = new TokenValidationParameters
-                {
-                    ValidateIssuer = true,
-                    ValidateAudience = true,
-                    ValidateLifetime = true,
-                    ValidateIssuerSigningKey = true,
-                    ValidIssuer = jwtSettings.Issuer,
-                    ValidAudience = jwtSettings.Audience,
-                    IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings.SecretKey))
-                };
-            });
-
-        _ = services.AddAuthorization();
+        _ = services.AddJwtAuthentication(configuration);
 
         return services;
     }

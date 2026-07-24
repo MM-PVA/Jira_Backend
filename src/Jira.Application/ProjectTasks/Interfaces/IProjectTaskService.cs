@@ -5,13 +5,13 @@ namespace Jira.Application.ProjectTasks.Interfaces;
 
 public interface IProjectTaskService
 {
-    Task<ProjectTaskResponse> CreateAsync(CreateProjectTaskModel model);
+    Task<ProjectTaskResponse> CreateAsync(CreateProjectTaskModel model, CancellationToken cancellationToken);
 
-    Task<IEnumerable<ProjectTaskResponse>> GetAllAsync(GetProjectTasksModel model);
+    Task<IEnumerable<ProjectTaskResponse>> GetAllAsync(GetProjectTasksModel model, CancellationToken cancellationToken);
 
-    Task<ProjectTaskResponse> GetByIdAsync(GetProjectTaskByIdModel model);
+    Task<ProjectTaskResponse> GetByIdAsync(GetProjectTaskByIdModel model, CancellationToken cancellationToken);
 
-    Task<ProjectTaskResponse> UpdateAsync(UpdateProjectTaskModel model);
+    Task<ProjectTaskResponse> UpdateAsync(UpdateProjectTaskModel model, CancellationToken cancellationToken);
 
-    Task DeleteAsync(DeleteProjectTaskModel model);
+    Task DeleteAsync(DeleteProjectTaskModel model, CancellationToken cancellationToken);
 }

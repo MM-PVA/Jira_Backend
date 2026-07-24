@@ -11,10 +11,15 @@ var app = builder.Build();
 
 // Configure middleware
 app.UseMiddleware<RequestResponseLoggingMiddleware>();
+
+// slow requests
+app.UseMiddleware<RequestDelayMiddleware>();
+
 app.UseExceptionHandler();
 app.UseHttpLogging();
 app.UseAuthentication();
 app.UseAuthorization();
+
 app.MapControllers();
 
 app.Run();
