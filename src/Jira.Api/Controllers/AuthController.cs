@@ -24,7 +24,7 @@ public class AuthController(IAuthService authService) : ControllerBase
 
         var response = await _authService.RegisterAsync(request, cancellationToken).ConfigureAwait(false);
 
-        return CreatedAtAction(nameof(GetCurrentUserAsync), response);
+        return Created(new Uri($"/api/v1/auth/users/{response.UserId}", UriKind.Relative), response);
     }
 
     [HttpPost("login")]
