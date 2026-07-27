@@ -1,21 +1,24 @@
 ﻿using Jira.Application.Authentication.DTOs;
 using Jira.Application.Authentication.Interfaces;
+using Jira.Application.Authentication.Interfaces.Repositories;
 using Jira.Domain.Entities;
 using Jira.Domain.Exceptions;
-using Jira.Infrastructure.Persistence;
 
 using Microsoft.AspNetCore.Identity;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
 namespace Jira.Infrastructure.Authentication;
 
-public class AuthService(AppDbContext context, ITokenService tokenService, ILogger<AuthService> logger) : IAuthService
+public class AuthService(
+    IUserRepository userRepository,
+    ITokenService tokenService,
+    ILogger<AuthService> logger)
+    : IAuthService
 {
-    private readonly AppDbContext _context = context;
-    private readonly PasswordHasher<User> _passwordHasher = new();
+    private readonly IUserRepository _userRepository = userRepository;
     private readonly ITokenService _tokenService = tokenService;
     private readonly ILogger<AuthService> _logger = logger;
+    private readonly PasswordHasher<User> _passwordHasher = new();
 
     public async Task<RegisterResponse> RegisterAsync(RegisterRequest request, CancellationToken cancellationToken)
     {
@@ -23,9 +26,9 @@ public class AuthService(AppDbContext context, ITokenService tokenService, ILogg
 
         try
         {
-            var existingUser = await _context.Users.FirstOrDefaultAsync(x => x.Email == request.Email, cancellationToken).ConfigureAwait(false);
+            var existingUser = await _userRepository.GetByEmailAsync(request.Email, cancellationToken).ConfigureAwait(false);
 
-            if (existingUser != null)
+            if (existingUser is not null)
             {
                 _logger.LogWarning("Attempt to register with an existing email: {Email}", request.Email);
                 throw new ConflictException("Email already exists.");
@@ -40,9 +43,11 @@ public class AuthService(AppDbContext context, ITokenService tokenService, ILogg
 
             user.PasswordHash = _passwordHasher.HashPassword(user, request.Password);
 
-            _context.Users.Add(user);
+            await _userRepository.AddAsync(user, cancellationToken).ConfigureAwait(false);
 
-            await _context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+            await _userRepository.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+            _logger.LogInformation("User registered successfully with ID: {UserId}", user.Id);
 
             return new RegisterResponse
             {
@@ -53,6 +58,7 @@ public class AuthService(AppDbContext context, ITokenService tokenService, ILogg
         catch (OperationCanceledException)
         {
             _logger.LogWarning("Registration request cancelled by {Email}", request.Email);
+
             throw;
         }
     }
@@ -65,9 +71,9 @@ public class AuthService(AppDbContext context, ITokenService tokenService, ILogg
 
         try
         {
-            var user = await _context.Users.FirstOrDefaultAsync(x => x.Email == request.Email, cancellationToken).ConfigureAwait(false);
+            var user = await _userRepository.GetByEmailAsync(request.Email, cancellationToken).ConfigureAwait(false);
 
-            if (user == null)
+            if (user is null)
             {
                 throw new UnauthorizedException("Invalid email or password.");
             }
@@ -98,9 +104,9 @@ public class AuthService(AppDbContext context, ITokenService tokenService, ILogg
     {
         try
         {
-            var user = await _context.Users.FindAsync([userId], cancellationToken).ConfigureAwait(false);
+            var user = await _userRepository.GetByIdAsync(userId, cancellationToken).ConfigureAwait(false);
 
-            if (user == null)
+            if (user is null)
             {
                 _logger.LogWarning("Attempt to get non-existent user with ID: {UserId}", userId);
                 throw new NotFoundException("User not found.");
@@ -118,7 +124,7 @@ public class AuthService(AppDbContext context, ITokenService tokenService, ILogg
         }
         catch (OperationCanceledException)
         {
-            _logger.LogWarning("GetCurrentUser request cancelled by user ID: {UserId}", userId);
+            _logger.LogWarning("GetCurrentUser request cancelled for user ID: {UserId}", userId);
             throw;
         }
     }

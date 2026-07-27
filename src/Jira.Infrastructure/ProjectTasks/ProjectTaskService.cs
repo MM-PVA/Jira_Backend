@@ -1,18 +1,18 @@
 ﻿using Jira.Application.ProjectTasks.DTOs;
 using Jira.Application.ProjectTasks.Interfaces;
+using Jira.Application.ProjectTasks.Interfaces.Repositories;
 using Jira.Application.ProjectTasks.Models;
 using Jira.Domain.Entities;
 using Jira.Domain.Exceptions;
-using Jira.Infrastructure.Persistence;
 
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
 namespace Jira.Infrastructure.ProjectTasks;
 
-public class ProjectTaskService(AppDbContext context, ILogger<ProjectTaskService> logger) : IProjectTaskService
+public class ProjectTaskService(IProjectTaskRepository projectTaskRepository, ILogger<ProjectTaskService> logger) : IProjectTaskService
 {
-    private readonly AppDbContext _context = context;
+    private readonly IProjectTaskRepository _projectTaskRepository = projectTaskRepository;
     private readonly ILogger<ProjectTaskService> _logger = logger;
 
     public async Task<ProjectTaskResponse> CreateAsync(CreateProjectTaskModel model, CancellationToken cancellationToken)
@@ -21,7 +21,7 @@ public class ProjectTaskService(AppDbContext context, ILogger<ProjectTaskService
 
         try
         {
-            var project = await _context.Projects.Include(project => project.Workspace).FirstOrDefaultAsync(project => project.Id == model.ProjectId && project.WorkspaceId == model.WorkspaceId && project.Workspace.OwnerId == model.OwnerId, cancellationToken).ConfigureAwait(false);
+            var project = await _projectTaskRepository.GetProjectAsync(model.ProjectId, model.WorkspaceId, model.OwnerId, cancellationToken).ConfigureAwait(false);
 
             if (project is null)
             {
@@ -36,18 +36,18 @@ public class ProjectTaskService(AppDbContext context, ILogger<ProjectTaskService
                 Title = model.Title,
                 Description = model.Description,
                 Priority = model.Priority,
-                DueDate = model.DueDate,
+                DueDate = model.DueDate.HasValue ? DateTime.SpecifyKind(model.DueDate.Value, DateTimeKind.Utc) : null,
                 Status = Domain.Enums.TaskStatus.Todo,
                 ProjectId = model.ProjectId,
                 AssigneeId = model.AssigneeId,
                 UpdatedAt = DateTime.UtcNow
             };
 
-            _context.ProjectTasks.Add(projectTask);
+            await _projectTaskRepository.AddAsync(projectTask, cancellationToken).ConfigureAwait(false);
+
+            await _projectTaskRepository.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
             _logger.LogInformation("Project task created successfully with ID: {ProjectTaskId}", projectTask.Id);
-
-            await _context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
             return new ProjectTaskResponse
             {
@@ -59,6 +59,15 @@ public class ProjectTaskService(AppDbContext context, ILogger<ProjectTaskService
                 DueDate = projectTask.DueDate,
                 ProjectId = projectTask.ProjectId
             };
+        }
+        catch (DbUpdateException exception)
+        {
+            _logger.LogError(
+                exception,
+                "Database error while creating project task. Inner exception: {InnerException}",
+                exception.InnerException?.Message);
+
+            throw;
         }
         catch (OperationCanceledException)
         {
@@ -73,26 +82,18 @@ public class ProjectTaskService(AppDbContext context, ILogger<ProjectTaskService
 
         try
         {
-            var query = _context.ProjectTasks.Where(task => task.ProjectId == model.ProjectId && task.Project.WorkspaceId == model.WorkspaceId && task.Project.Workspace.OwnerId == model.OwnerId);
+            var tasks = await _projectTaskRepository.GetAllAsync(model.ProjectId, model.WorkspaceId, model.OwnerId, model.Search, cancellationToken).ConfigureAwait(false);
 
-            if (!string.IsNullOrWhiteSpace(model.Search))
+            return tasks.Select(task => new ProjectTaskResponse
             {
-                query = _context.ProjectTasks.Where(task => EF.Functions.Like(task.Title, $"%{model.Search}%"));
-            }
-
-            return await query
-                .Select(task => new ProjectTaskResponse
-                {
-                    Id = task.Id,
-                    Title = task.Title,
-                    Description = task.Description,
-                    Status = task.Status,
-                    Priority = task.Priority,
-                    DueDate = task.DueDate,
-                    ProjectId = task.ProjectId
-                })
-                .ToListAsync(cancellationToken)
-                .ConfigureAwait(false);
+                Id = task.Id,
+                Title = task.Title,
+                Description = task.Description,
+                Status = task.Status,
+                Priority = task.Priority,
+                DueDate = task.DueDate,
+                ProjectId = task.ProjectId
+            });
         }
         catch (OperationCanceledException)
         {
@@ -107,19 +108,7 @@ public class ProjectTaskService(AppDbContext context, ILogger<ProjectTaskService
 
         try
         {
-            var task = await _context.ProjectTasks.Where(task => task.Id == model.ProjectTaskId && task.ProjectId == model.ProjectId && task.Project.WorkspaceId == model.WorkspaceId && task.Project.Workspace.OwnerId == model.OwnerId)
-                .Select(task => new ProjectTaskResponse
-                {
-                    Id = task.Id,
-                    Title = task.Title,
-                    Description = task.Description,
-                    Status = task.Status,
-                    Priority = task.Priority,
-                    DueDate = task.DueDate,
-                    ProjectId = task.ProjectId
-                })
-                .FirstOrDefaultAsync(cancellationToken)
-                .ConfigureAwait(false);
+            var task = await _projectTaskRepository.GetByIdAsync(model.ProjectTaskId, model.ProjectId, model.WorkspaceId, model.OwnerId, cancellationToken).ConfigureAwait(false);
 
             if (task is null)
             {
@@ -127,7 +116,16 @@ public class ProjectTaskService(AppDbContext context, ILogger<ProjectTaskService
                 throw new NotFoundException("Task not found.");
             }
 
-            return task;
+            return new ProjectTaskResponse
+            {
+                Id = task.Id,
+                Title = task.Title,
+                Description = task.Description,
+                Status = task.Status,
+                Priority = task.Priority,
+                DueDate = task.DueDate,
+                ProjectId = task.ProjectId
+            };
         }
         catch (OperationCanceledException)
         {
@@ -142,7 +140,7 @@ public class ProjectTaskService(AppDbContext context, ILogger<ProjectTaskService
 
         try
         {
-            var task = await _context.ProjectTasks.FirstOrDefaultAsync(task => task.Id == model.ProjectTaskId && task.ProjectId == model.ProjectId && task.Project.WorkspaceId == model.WorkspaceId && task.Project.Workspace.OwnerId == model.OwnerId, cancellationToken).ConfigureAwait(false);
+            var task = await _projectTaskRepository.GetByIdAsync(model.ProjectTaskId, model.ProjectId, model.WorkspaceId, model.OwnerId, cancellationToken).ConfigureAwait(false);
 
             if (task is null)
             {
@@ -156,10 +154,10 @@ public class ProjectTaskService(AppDbContext context, ILogger<ProjectTaskService
             task.Description = model.Description;
             task.Status = model.Status;
             task.Priority = model.Priority;
-            task.DueDate = model.DueDate;
+            task.DueDate = model.DueDate.HasValue ? DateTime.SpecifyKind(model.DueDate.Value, DateTimeKind.Utc) : null;
             task.UpdatedAt = DateTime.UtcNow;
 
-            await _context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+            await _projectTaskRepository.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
             _logger.LogInformation("Project task updated successfully with ID: {ProjectTaskId}", task.Id);
 
@@ -187,7 +185,7 @@ public class ProjectTaskService(AppDbContext context, ILogger<ProjectTaskService
 
         try
         {
-            var task = await _context.ProjectTasks.FirstOrDefaultAsync(task => task.Id == model.ProjectTaskId && task.ProjectId == model.ProjectId && task.Project.WorkspaceId == model.WorkspaceId && task.Project.Workspace.OwnerId == model.OwnerId, cancellationToken).ConfigureAwait(false);
+            var task = await _projectTaskRepository.GetByIdAsync(model.ProjectTaskId, model.ProjectId, model.WorkspaceId, model.OwnerId, cancellationToken).ConfigureAwait(false);
 
             if (task is null)
             {
@@ -195,11 +193,11 @@ public class ProjectTaskService(AppDbContext context, ILogger<ProjectTaskService
                 throw new NotFoundException("Task not found.");
             }
 
-            _context.ProjectTasks.Remove(task);
+            _projectTaskRepository.Remove(task);
+
+            await _projectTaskRepository.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
             _logger.LogInformation("Project task deleted successfully with ID: {ProjectTaskId}", task.Id);
-
-            await _context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
         }
         catch (OperationCanceledException)
         {
@@ -208,4 +206,3 @@ public class ProjectTaskService(AppDbContext context, ILogger<ProjectTaskService
         }
     }
 }
-

@@ -1,17 +1,16 @@
 ﻿using Jira.Application.Workspaces.DTOs;
 using Jira.Application.Workspaces.Interfaces;
+using Jira.Application.Workspaces.Interfaces.Repositories;
 using Jira.Domain.Entities;
 using Jira.Domain.Exceptions;
-using Jira.Infrastructure.Persistence;
 
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
 namespace Jira.Infrastructure.Workspaces;
 
-public class WorkspaceService(AppDbContext context, ILogger<WorkspaceService> logger) : IWorkspaceService
+public class WorkspaceService(IWorkspaceRepository workspaceRepository, ILogger<WorkspaceService> logger) : IWorkspaceService
 {
-    private readonly AppDbContext _context = context;
+    private readonly IWorkspaceRepository _workspaceRepository = workspaceRepository;
     private readonly ILogger<WorkspaceService> _logger = logger;
 
     public async Task<WorkspaceResponse> CreateAsync(Guid ownerId, CreateWorkspaceRequest request, CancellationToken cancellationToken)
@@ -28,9 +27,9 @@ public class WorkspaceService(AppDbContext context, ILogger<WorkspaceService> lo
                 UpdatedAt = DateTime.UtcNow
             };
 
-            _context.Workspaces.Add(workspace);
+            await _workspaceRepository.AddAsync(workspace, cancellationToken).ConfigureAwait(false);
 
-            await _context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+            await _workspaceRepository.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
             _logger.LogInformation("Workspace created successfully with ID: {WorkspaceId}", workspace.Id);
 
@@ -53,16 +52,15 @@ public class WorkspaceService(AppDbContext context, ILogger<WorkspaceService> lo
     {
         try
         {
-            return await _context.Workspaces.Where(workspace => workspace.OwnerId == ownerId)
-                .Select(workspace => new WorkspaceResponse
-                {
-                    Id = workspace.Id,
-                    Name = workspace.Name,
-                    Description = workspace.Description,
-                    OwnerId = workspace.OwnerId
-                })
-                .ToListAsync(cancellationToken)
-                .ConfigureAwait(false);
+            var workspaces = await _workspaceRepository.GetAllAsync(ownerId, cancellationToken).ConfigureAwait(false);
+
+            return workspaces.Select(workspace => new WorkspaceResponse
+            {
+                Id = workspace.Id,
+                Name = workspace.Name,
+                Description = workspace.Description,
+                OwnerId = workspace.OwnerId
+            });
         }
         catch (OperationCanceledException)
         {
@@ -75,7 +73,7 @@ public class WorkspaceService(AppDbContext context, ILogger<WorkspaceService> lo
     {
         try
         {
-            var workspace = await _context.Workspaces.FirstOrDefaultAsync(workspace => workspace.Id == workspaceId && workspace.OwnerId == ownerId, cancellationToken).ConfigureAwait(false);
+            var workspace = await _workspaceRepository.GetByIdAsync(workspaceId, ownerId, cancellationToken).ConfigureAwait(false);
 
             if (workspace is null)
             {
@@ -106,7 +104,7 @@ public class WorkspaceService(AppDbContext context, ILogger<WorkspaceService> lo
 
         try
         {
-            var workspace = await _context.Workspaces.FirstOrDefaultAsync(workspace => workspace.Id == workspaceId && workspace.OwnerId == ownerId, cancellationToken).ConfigureAwait(false);
+            var workspace = await _workspaceRepository.GetByIdAsync(workspaceId, ownerId, cancellationToken).ConfigureAwait(false);
 
             if (workspace is null)
             {
@@ -118,7 +116,7 @@ public class WorkspaceService(AppDbContext context, ILogger<WorkspaceService> lo
             workspace.Description = request.Description;
             workspace.UpdatedAt = DateTime.UtcNow;
 
-            await _context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+            await _workspaceRepository.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
             _logger.LogInformation("Workspace updated successfully with ID: {WorkspaceId}", workspace.Id);
 
@@ -141,7 +139,7 @@ public class WorkspaceService(AppDbContext context, ILogger<WorkspaceService> lo
     {
         try
         {
-            var workspace = await _context.Workspaces.FirstOrDefaultAsync(workspace => workspace.Id == workspaceId && workspace.OwnerId == ownerId, cancellationToken).ConfigureAwait(false);
+            var workspace = await _workspaceRepository.GetByIdAsync(workspaceId, ownerId, cancellationToken).ConfigureAwait(false);
 
             if (workspace is null)
             {
@@ -149,11 +147,11 @@ public class WorkspaceService(AppDbContext context, ILogger<WorkspaceService> lo
                 throw new NotFoundException("Workspace not found.");
             }
 
-            _context.Workspaces.Remove(workspace);
+            _workspaceRepository.Remove(workspace);
+
+            await _workspaceRepository.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
             _logger.LogInformation("Workspace deleted successfully with ID: {WorkspaceId}", workspace.Id);
-
-            await _context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
         }
         catch (OperationCanceledException)
         {

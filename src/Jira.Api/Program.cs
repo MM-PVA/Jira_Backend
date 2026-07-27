@@ -13,7 +13,7 @@ var app = builder.Build();
 app.UseMiddleware<RequestResponseLoggingMiddleware>();
 
 // slow requests
-app.UseMiddleware<RequestDelayMiddleware>();
+// app.UseMiddleware<RequestDelayMiddleware>();
 
 app.UseExceptionHandler();
 app.UseHttpLogging();

@@ -1,17 +1,16 @@
 ﻿using Jira.Application.Projects.DTOs;
 using Jira.Application.Projects.Interfaces;
+using Jira.Application.Projects.Interfaces.Repositories;
 using Jira.Domain.Entities;
 using Jira.Domain.Exceptions;
-using Jira.Infrastructure.Persistence;
 
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
 namespace Jira.Infrastructure.Projects;
 
-public class ProjectService(AppDbContext context, ILogger<ProjectService> logger) : IProjectService
+public class ProjectService(IProjectRepository projectRepository, ILogger<ProjectService> logger) : IProjectService
 {
-    private readonly AppDbContext _context = context;
+    private readonly IProjectRepository _projectRepository = projectRepository;
     private readonly ILogger<ProjectService> _logger = logger;
 
     public async Task<ProjectResponse> CreateAsync(Guid workspaceId, Guid ownerId, CreateProjectRequest request, CancellationToken cancellationToken)
@@ -20,9 +19,9 @@ public class ProjectService(AppDbContext context, ILogger<ProjectService> logger
 
         try
         {
-            var workspace = await _context.Workspaces.FirstOrDefaultAsync(workspace => workspace.Id == workspaceId && workspace.OwnerId == ownerId, cancellationToken).ConfigureAwait(false);
+            var workspaceExists = await _projectRepository.WorkspaceExistsAsync(workspaceId, ownerId, cancellationToken).ConfigureAwait(false);
 
-            if (workspace is null)
+            if (!workspaceExists)
             {
                 _logger.LogWarning("Attempt to create project in non-existent workspace: {WorkspaceId}", workspaceId);
                 throw new NotFoundException("Workspace not found.");
@@ -37,9 +36,11 @@ public class ProjectService(AppDbContext context, ILogger<ProjectService> logger
                 UpdatedAt = DateTime.UtcNow
             };
 
-            _context.Projects.Add(project);
+            await _projectRepository.AddAsync(project, cancellationToken).ConfigureAwait(false);
 
-            await _context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+            await _projectRepository.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+            _logger.LogInformation("Project created successfully with ID: {ProjectId}", project.Id);
 
             return new ProjectResponse
             {
@@ -61,26 +62,24 @@ public class ProjectService(AppDbContext context, ILogger<ProjectService> logger
     {
         try
         {
-            var workspace = await _context.Workspaces.FirstOrDefaultAsync(workspace => workspace.Id == workspaceId && workspace.OwnerId == ownerId, cancellationToken).ConfigureAwait(false);
+            var workspaceExists = await _projectRepository.WorkspaceExistsAsync(workspaceId, ownerId, cancellationToken).ConfigureAwait(false);
 
-            if (workspace is null)
+            if (!workspaceExists)
             {
                 _logger.LogWarning("Attempt to get projects for non-existent workspace: {WorkspaceId}", workspaceId);
                 throw new NotFoundException("Workspace not found.");
             }
 
-            return await _context.Projects
-                .Where(project => project.WorkspaceId == workspaceId)
-                .Select(project => new ProjectResponse
-                {
-                    Id = project.Id,
-                    Name = project.Name,
-                    Description = project.Description,
-                    Status = project.Status,
-                    WorkspaceId = project.WorkspaceId
-                })
-                .ToListAsync(cancellationToken)
-                .ConfigureAwait(false);
+            var projects = await _projectRepository.GetAllAsync(workspaceId, cancellationToken).ConfigureAwait(false);
+
+            return projects.Select(project => new ProjectResponse
+            {
+                Id = project.Id,
+                Name = project.Name,
+                Description = project.Description,
+                Status = project.Status,
+                WorkspaceId = project.WorkspaceId
+            });
         }
         catch (OperationCanceledException)
         {
@@ -93,7 +92,7 @@ public class ProjectService(AppDbContext context, ILogger<ProjectService> logger
     {
         try
         {
-            var project = await _context.Projects.Include(project => project.Workspace).FirstOrDefaultAsync(project => project.Id == projectId && project.WorkspaceId == workspaceId && project.Workspace.OwnerId == ownerId, cancellationToken).ConfigureAwait(false);
+            var project = await _projectRepository.GetByIdAsync(projectId, workspaceId, ownerId, cancellationToken).ConfigureAwait(false);
 
             if (project is null)
             {
@@ -123,7 +122,7 @@ public class ProjectService(AppDbContext context, ILogger<ProjectService> logger
 
         try
         {
-            var project = await _context.Projects.Include(project => project.Workspace).FirstOrDefaultAsync(project => project.Id == projectId && project.WorkspaceId == workspaceId && project.Workspace.OwnerId == ownerId, cancellationToken).ConfigureAwait(false);
+            var project = await _projectRepository.GetByIdAsync(projectId, workspaceId, ownerId, cancellationToken).ConfigureAwait(false);
 
             if (project is null)
             {
@@ -136,7 +135,7 @@ public class ProjectService(AppDbContext context, ILogger<ProjectService> logger
             project.Status = request.Status;
             project.UpdatedAt = DateTime.UtcNow;
 
-            await _context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+            await _projectRepository.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
             _logger.LogInformation("Project updated successfully with ID: {ProjectId}", project.Id);
 
@@ -160,7 +159,7 @@ public class ProjectService(AppDbContext context, ILogger<ProjectService> logger
     {
         try
         {
-            var project = await _context.Projects.Include(project => project.Workspace).FirstOrDefaultAsync(project => project.Id == projectId && project.WorkspaceId == workspaceId && project.Workspace.OwnerId == ownerId, cancellationToken).ConfigureAwait(false);
+            var project = await _projectRepository.GetByIdAsync(projectId, workspaceId, ownerId, cancellationToken).ConfigureAwait(false);
 
             if (project is null)
             {
@@ -168,11 +167,11 @@ public class ProjectService(AppDbContext context, ILogger<ProjectService> logger
                 throw new NotFoundException("Project not found.");
             }
 
-            _context.Projects.Remove(project);
+            _projectRepository.Remove(project);
+
+            await _projectRepository.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
             _logger.LogInformation("Project deleted successfully with ID: {ProjectId}", project.Id);
-
-            await _context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
         }
         catch (OperationCanceledException)
         {

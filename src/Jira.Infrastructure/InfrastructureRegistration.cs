@@ -12,6 +12,10 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Jira.Application.Logging.Interfaces;
 using Jira.Infrastructure.Logging;
+using Jira.Application.Authentication.Interfaces.Repositories;
+using Jira.Application.Workspaces.Interfaces.Repositories;
+using Jira.Application.Projects.Interfaces.Repositories;
+using Jira.Application.ProjectTasks.Interfaces.Repositories;
 
 namespace Jira.Infrastructure;
 
@@ -23,7 +27,7 @@ public static class InfrastructureRegistration
         ArgumentNullException.ThrowIfNull(configuration);
 
         // options is the object configures how EF Core should work.
-        services.AddDbContext<AppDbContext>(options => options.UseSqlite(configuration.GetConnectionString("DefaultConnection")));
+        services.AddDbContext<AppDbContext>(options => options.UseNpgsql(configuration.GetConnectionString("DefaultConnection")));
 
         services.Configure<JwtSettings>(configuration.GetSection(JwtSettings.SectionName));
 
@@ -39,6 +43,14 @@ public static class InfrastructureRegistration
         services.AddScoped<IProjectTaskService, ProjectTaskService>();
 
         services.AddScoped<ILogService, LogService>();
+
+        services.AddScoped<IUserRepository, UserRepository>();
+
+        services.AddScoped<IWorkspaceRepository, WorkspaceRepository>();
+
+        services.AddScoped<IProjectRepository, ProjectRepository>();
+
+        services.AddScoped<IProjectTaskRepository, ProjectTaskRepository>();
 
         return services;
     }
