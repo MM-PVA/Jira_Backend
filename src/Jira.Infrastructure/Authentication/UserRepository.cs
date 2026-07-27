@@ -12,12 +12,12 @@ public sealed class UserRepository(AppDbContext context) : IUserRepository
 
     public async Task<User?> GetByEmailAsync(string email, CancellationToken cancellationToken)
     {
-        return await _context.Users.FirstOrDefaultAsync(x => x.Email == email, cancellationToken).ConfigureAwait(false);
+        return await _context.Users.FirstOrDefaultAsync(user => user.Email == email, cancellationToken).ConfigureAwait(false);
     }
 
     public async Task<User?> GetByIdAsync(Guid userId, CancellationToken cancellationToken)
     {
-        return await _context.Users.FirstOrDefaultAsync(x => x.Id == userId, cancellationToken).ConfigureAwait(false);
+        return await _context.Users.FirstOrDefaultAsync(user => user.Id == userId, cancellationToken).ConfigureAwait(false);
     }
 
     public async Task AddAsync(User user, CancellationToken cancellationToken)

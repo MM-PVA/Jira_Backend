@@ -27,7 +27,7 @@ public static class InfrastructureRegistration
         ArgumentNullException.ThrowIfNull(configuration);
 
         // options is the object configures how EF Core should work.
-        services.AddDbContext<AppDbContext>(options => options.UseNpgsql(configuration.GetConnectionString("DefaultConnection")));
+        services.AddDbContext<AppDbContext>(options => options.UseCosmos(configuration.GetConnectionString("DefaultConnection"), configuration["CosmosDb:DatabaseName"]));
 
         services.Configure<JwtSettings>(configuration.GetSection(JwtSettings.SectionName));
 
