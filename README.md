@@ -117,4 +117,3 @@ Base route: `/api/v{version}/workspaces/{workspaceId}/projects/{projectId}/tasks
 ## Notes
 
 - Request/response metadata is logged to daily `.jsonl` files under `LoggingSettings:LogDirectory`.
-- Swagger/OpenAPI UI is not currently enabled in startup configuration.
