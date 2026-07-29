@@ -21,9 +21,9 @@ public class ProjectTaskService(IProjectTaskRepository projectTaskRepository, IL
 
         try
         {
-            var project = await _projectTaskRepository.GetProjectAsync(model.ProjectId, model.WorkspaceId, model.OwnerId, cancellationToken).ConfigureAwait(false);
+            var projectExists = await _projectTaskRepository.ProjectExistsAsync(model.ProjectId, model.WorkspaceId, model.OwnerId, cancellationToken).ConfigureAwait(false);
 
-            if (project is null)
+            if (!projectExists)
             {
                 _logger.LogWarning("Attempt to create task for non-existent project: {ProjectId}", model.ProjectId);
                 throw new NotFoundException("Project not found.");
@@ -82,7 +82,15 @@ public class ProjectTaskService(IProjectTaskRepository projectTaskRepository, IL
 
         try
         {
-            var tasks = await _projectTaskRepository.GetAllAsync(model.ProjectId, model.WorkspaceId, model.OwnerId, model.Search, cancellationToken).ConfigureAwait(false);
+            var projectExists = await _projectTaskRepository.ProjectExistsAsync(model.ProjectId, model.WorkspaceId, model.OwnerId, cancellationToken).ConfigureAwait(false);
+
+            if (!projectExists)
+            {
+                _logger.LogWarning("Attempt to get tasks for non-existent project: {ProjectId}", model.ProjectId);
+                throw new NotFoundException("Project not found.");
+            }
+
+            var tasks = await _projectTaskRepository.GetAllAsync(model.ProjectId, model.Search, cancellationToken).ConfigureAwait(false);
 
             return tasks.Select(task => new ProjectTaskResponse
             {
@@ -108,7 +116,15 @@ public class ProjectTaskService(IProjectTaskRepository projectTaskRepository, IL
 
         try
         {
-            var task = await _projectTaskRepository.GetByIdAsync(model.ProjectTaskId, model.ProjectId, model.WorkspaceId, model.OwnerId, cancellationToken).ConfigureAwait(false);
+            var projectExists = await _projectTaskRepository.ProjectExistsAsync(model.ProjectId, model.WorkspaceId, model.OwnerId, cancellationToken).ConfigureAwait(false);
+
+            if (!projectExists)
+            {
+                _logger.LogWarning("Attempt to get task for non-existent project: {ProjectId}", model.ProjectId);
+                throw new NotFoundException("Project not found.");
+            }
+
+            var task = await _projectTaskRepository.GetByIdAsync(model.ProjectTaskId, model.ProjectId, cancellationToken).ConfigureAwait(false);
 
             if (task is null)
             {
@@ -140,7 +156,15 @@ public class ProjectTaskService(IProjectTaskRepository projectTaskRepository, IL
 
         try
         {
-            var task = await _projectTaskRepository.GetByIdAsync(model.ProjectTaskId, model.ProjectId, model.WorkspaceId, model.OwnerId, cancellationToken).ConfigureAwait(false);
+            var projectExists = await _projectTaskRepository.ProjectExistsAsync(model.ProjectId, model.WorkspaceId, model.OwnerId, cancellationToken).ConfigureAwait(false);
+
+            if (!projectExists)
+            {
+                _logger.LogWarning("Attempt to update task for non-existent project: {ProjectId}", model.ProjectId);
+                throw new NotFoundException("Project not found.");
+            }
+
+            var task = await _projectTaskRepository.GetByIdAsync(model.ProjectTaskId, model.ProjectId, cancellationToken).ConfigureAwait(false);
 
             if (task is null)
             {
@@ -185,7 +209,15 @@ public class ProjectTaskService(IProjectTaskRepository projectTaskRepository, IL
 
         try
         {
-            var task = await _projectTaskRepository.GetByIdAsync(model.ProjectTaskId, model.ProjectId, model.WorkspaceId, model.OwnerId, cancellationToken).ConfigureAwait(false);
+            var projectExists = await _projectTaskRepository.ProjectExistsAsync(model.ProjectId, model.WorkspaceId, model.OwnerId, cancellationToken).ConfigureAwait(false);
+
+            if (!projectExists)
+            {
+                _logger.LogWarning("Attempt to delete task for non-existent project: {ProjectId}", model.ProjectId);
+                throw new NotFoundException("Project not found.");
+            }
+
+            var task = await _projectTaskRepository.GetByIdAsync(model.ProjectTaskId, model.ProjectId, cancellationToken).ConfigureAwait(false);
 
             if (task is null)
             {

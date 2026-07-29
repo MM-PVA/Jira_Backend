@@ -10,9 +10,18 @@ public sealed class ProjectTaskRepository(AppDbContext context) : IProjectTaskRe
 {
     private readonly AppDbContext _context = context;
 
-    public async Task<Project?> GetProjectAsync(Guid projectId, Guid workspaceId, Guid ownerId, CancellationToken cancellationToken)
+    public async Task<bool> ProjectExistsAsync(Guid projectId, Guid workspaceId, Guid ownerId, CancellationToken cancellationToken)
     {
-        return await _context.Projects.Include(project => project.Workspace).FirstOrDefaultAsync(project => project.Id == projectId && project.WorkspaceId == workspaceId && project.Workspace.OwnerId == ownerId, cancellationToken).ConfigureAwait(false);
+        var workspace = await _context.Workspaces.FirstOrDefaultAsync(workspace => workspace.Id == workspaceId && workspace.OwnerId == ownerId, cancellationToken).ConfigureAwait(false);
+
+        if (workspace is null)
+        {
+            return false;
+        }
+
+        var project = await _context.Projects.FirstOrDefaultAsync(project => project.Id == projectId && project.WorkspaceId == workspaceId, cancellationToken).ConfigureAwait(false);
+
+        return project is not null;
     }
 
     public async Task AddAsync(ProjectTask projectTask, CancellationToken cancellationToken)
@@ -20,9 +29,9 @@ public sealed class ProjectTaskRepository(AppDbContext context) : IProjectTaskRe
         await _context.ProjectTasks.AddAsync(projectTask, cancellationToken).ConfigureAwait(false);
     }
 
-    public async Task<IEnumerable<ProjectTask>> GetAllAsync(Guid projectId, Guid workspaceId, Guid ownerId, string? search, CancellationToken cancellationToken)
+    public async Task<IEnumerable<ProjectTask>> GetAllAsync(Guid projectId, string? search, CancellationToken cancellationToken)
     {
-        var query = _context.ProjectTasks.Where(task => task.ProjectId == projectId && task.Project.WorkspaceId == workspaceId && task.Project.Workspace.OwnerId == ownerId);
+        var query = _context.ProjectTasks.Where(task => task.ProjectId == projectId);
 
         if (!string.IsNullOrWhiteSpace(search))
         {
@@ -32,9 +41,9 @@ public sealed class ProjectTaskRepository(AppDbContext context) : IProjectTaskRe
         return await query.ToListAsync(cancellationToken).ConfigureAwait(false);
     }
 
-    public async Task<ProjectTask?> GetByIdAsync(Guid projectTaskId, Guid projectId, Guid workspaceId, Guid ownerId, CancellationToken cancellationToken)
+    public async Task<ProjectTask?> GetByIdAsync(Guid projectTaskId, Guid projectId, CancellationToken cancellationToken)
     {
-        return await _context.ProjectTasks.FirstOrDefaultAsync(task => task.Id == projectTaskId && task.ProjectId == projectId && task.Project.WorkspaceId == workspaceId && task.Project.Workspace.OwnerId == ownerId, cancellationToken).ConfigureAwait(false);
+        return await _context.ProjectTasks.FirstOrDefaultAsync(task => task.Id == projectTaskId && task.ProjectId == projectId, cancellationToken).ConfigureAwait(false);
     }
 
     public void Remove(ProjectTask projectTask)

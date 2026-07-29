@@ -12,7 +12,9 @@ public sealed class ProjectRepository(AppDbContext context) : IProjectRepository
 
     public async Task<bool> WorkspaceExistsAsync(Guid workspaceId, Guid ownerId, CancellationToken cancellationToken)
     {
-        return await _context.Workspaces.AnyAsync(workspace => workspace.Id == workspaceId && workspace.OwnerId == ownerId, cancellationToken).ConfigureAwait(false);
+        var workspace = await _context.Workspaces.FirstOrDefaultAsync(workspace => workspace.Id == workspaceId && workspace.OwnerId == ownerId, cancellationToken).ConfigureAwait(false);
+
+        return workspace is not null;
     }
 
     public async Task AddAsync(Project project, CancellationToken cancellationToken)
@@ -25,9 +27,9 @@ public sealed class ProjectRepository(AppDbContext context) : IProjectRepository
         return await _context.Projects.Where(project => project.WorkspaceId == workspaceId).ToListAsync(cancellationToken).ConfigureAwait(false);
     }
 
-    public async Task<Project?> GetByIdAsync(Guid projectId, Guid workspaceId, Guid ownerId, CancellationToken cancellationToken)
+    public async Task<Project?> GetByIdAsync(Guid projectId, Guid workspaceId, CancellationToken cancellationToken)
     {
-        return await _context.Projects.Include(project => project.Workspace).FirstOrDefaultAsync(project => project.Id == projectId && project.WorkspaceId == workspaceId && project.Workspace.OwnerId == ownerId, cancellationToken).ConfigureAwait(false);
+        return await _context.Projects.FirstOrDefaultAsync(project => project.Id == projectId && project.WorkspaceId == workspaceId, cancellationToken).ConfigureAwait(false);
     }
 
     public void Remove(Project project)

@@ -92,7 +92,15 @@ public class ProjectService(IProjectRepository projectRepository, ILogger<Projec
     {
         try
         {
-            var project = await _projectRepository.GetByIdAsync(projectId, workspaceId, ownerId, cancellationToken).ConfigureAwait(false);
+            var workspaceExists = await _projectRepository.WorkspaceExistsAsync(workspaceId, ownerId, cancellationToken).ConfigureAwait(false);
+
+            if (!workspaceExists)
+            {
+                _logger.LogWarning("Attempt to get project from non-existent workspace: {WorkspaceId}", workspaceId);
+                throw new NotFoundException("Workspace not found.");
+            }
+
+            var project = await _projectRepository.GetByIdAsync(projectId, workspaceId, cancellationToken).ConfigureAwait(false);
 
             if (project is null)
             {
@@ -122,7 +130,15 @@ public class ProjectService(IProjectRepository projectRepository, ILogger<Projec
 
         try
         {
-            var project = await _projectRepository.GetByIdAsync(projectId, workspaceId, ownerId, cancellationToken).ConfigureAwait(false);
+            var workspaceExists = await _projectRepository.WorkspaceExistsAsync(workspaceId, ownerId, cancellationToken).ConfigureAwait(false);
+
+            if (!workspaceExists)
+            {
+                _logger.LogWarning("Attempt to update project in non-existent workspace: {WorkspaceId}", workspaceId);
+                throw new NotFoundException("Workspace not found.");
+            }
+
+            var project = await _projectRepository.GetByIdAsync(projectId, workspaceId, cancellationToken).ConfigureAwait(false);
 
             if (project is null)
             {
@@ -159,7 +175,15 @@ public class ProjectService(IProjectRepository projectRepository, ILogger<Projec
     {
         try
         {
-            var project = await _projectRepository.GetByIdAsync(projectId, workspaceId, ownerId, cancellationToken).ConfigureAwait(false);
+            var workspaceExists = await _projectRepository.WorkspaceExistsAsync(workspaceId, ownerId, cancellationToken).ConfigureAwait(false);
+
+            if (!workspaceExists)
+            {
+                _logger.LogWarning("Attempt to delete project from non-existent workspace: {WorkspaceId}", workspaceId);
+                throw new NotFoundException("Workspace not found.");
+            }
+
+            var project = await _projectRepository.GetByIdAsync(projectId, workspaceId, cancellationToken).ConfigureAwait(false);
 
             if (project is null)
             {

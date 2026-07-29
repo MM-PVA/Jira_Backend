@@ -10,7 +10,7 @@ public interface IProjectRepository
 
     Task<IEnumerable<Project>> GetAllAsync(Guid workspaceId, CancellationToken cancellationToken);
 
-    Task<Project?> GetByIdAsync(Guid projectId, Guid workspaceId, Guid ownerId, CancellationToken cancellationToken);
+    Task<Project?> GetByIdAsync(Guid projectId, Guid workspaceId, CancellationToken cancellationToken);
 
     Task SaveChangesAsync(CancellationToken cancellationToken);
 

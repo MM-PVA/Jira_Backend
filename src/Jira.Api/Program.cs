@@ -1,5 +1,5 @@
-﻿using Jira.Api.Middleware;
-using Jira.Api.Extensions;
+﻿using Jira.Api.Extensions;
+using Jira.Api.Middleware;
 using Jira.Infrastructure.Persistence;
 
 // CreateBuilder() => Creates the dependency injection container.
@@ -13,7 +13,7 @@ var app = builder.Build();
 using (var scope = app.Services.CreateScope())
 {
     var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-    _ = await dbContext.Database.EnsureCreatedAsync().ConfigureAwait(false);
+    // await dbContext.Database.EnsureCreatedAsync().ConfigureAwait(false);
 }
 
 // Configure middleware

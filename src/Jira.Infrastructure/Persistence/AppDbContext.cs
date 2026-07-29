@@ -50,9 +50,6 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         _ = modelBuilder.Entity<ProjectTask>().HasPartitionKey(task => task.ProjectId);
         _ = modelBuilder.Entity<ProjectTask>().Ignore(task => task.Project);
 
-        _ = modelBuilder.Entity<ProjectTask>().Property(task => task.Status).HasConversion<string>();
-        _ = modelBuilder.Entity<ProjectTask>().Property(task => task.Priority).HasConversion<string>();
-
         // Enum conversions
         _ = modelBuilder.Entity<ProjectTask>().Property(task => task.Status).HasConversion<string>();
         _ = modelBuilder.Entity<ProjectTask>().Property(task => task.Priority).HasConversion<string>();
