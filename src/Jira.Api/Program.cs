@@ -24,6 +24,7 @@ app.UseMiddleware<RequestResponseLoggingMiddleware>();
 
 app.UseExceptionHandler();
 app.UseHttpLogging();
+app.UseCors("AngularClient");
 app.UseAuthentication();
 app.UseAuthorization();
 

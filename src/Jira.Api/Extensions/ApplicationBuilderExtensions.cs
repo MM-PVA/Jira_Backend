@@ -43,6 +43,8 @@ internal static class ApplicationBuilderExtensions
         // HTTP Logging
         _ = services.AddHttpLogging();
 
+        _ = services.AddCors(options => options.AddPolicy("AngularClient", policy => policy.WithOrigins("http://localhost:4200").AllowAnyHeader().AllowAnyMethod()));
+
         // Register Infrastructure services
         _ = services.AddInfrastructure(configuration);
 
