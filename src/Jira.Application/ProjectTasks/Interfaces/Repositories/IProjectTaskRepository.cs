@@ -8,7 +8,7 @@ public interface IProjectTaskRepository
 
     Task AddAsync(ProjectTask projectTask, CancellationToken cancellationToken);
 
-    Task<IEnumerable<ProjectTask>> GetAllAsync(Guid projectId, string? search, CancellationToken cancellationToken);
+    Task<(IEnumerable<ProjectTask> Items, int TotalCount)> GetAllAsync(Guid projectId, string? search, int pageNumber, int pageSize, CancellationToken cancellationToken);
 
     Task<ProjectTask?> GetByIdAsync(Guid projectTaskId, Guid projectId, CancellationToken cancellationToken);
 

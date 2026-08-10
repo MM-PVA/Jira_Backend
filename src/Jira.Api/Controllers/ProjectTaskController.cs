@@ -66,7 +66,9 @@ public class ProjectTaskController(IProjectTaskService projectTaskService) : Con
             WorkspaceId = workspaceId,
             ProjectId = projectId,
             OwnerId = ownerId,
-            Search = request.Search
+            Search = request.Search,
+            PageNumber = request.PageNumber,
+            PageSize = request.PageSize
         };
 
         var response = await _projectTaskService.GetAllAsync(model, cancellationToken).ConfigureAwait(false);

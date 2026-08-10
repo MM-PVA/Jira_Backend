@@ -29,16 +29,34 @@ public sealed class ProjectTaskRepository(AppDbContext context) : IProjectTaskRe
         await _context.ProjectTasks.AddAsync(projectTask, cancellationToken).ConfigureAwait(false);
     }
 
-    public async Task<IEnumerable<ProjectTask>> GetAllAsync(Guid projectId, string? search, CancellationToken cancellationToken)
+    public async Task<(IEnumerable<ProjectTask> Items, int TotalCount)> GetAllAsync(
+        Guid projectId,
+        string? search,
+        int pageNumber,
+        int pageSize,
+        CancellationToken cancellationToken)
     {
-        var query = _context.ProjectTasks.Where(task => task.ProjectId == projectId);
+        var query = _context.ProjectTasks
+            .Where(task => task.ProjectId == projectId);
 
         if (!string.IsNullOrWhiteSpace(search))
         {
-            query = query.Where(task => EF.Functions.Like(task.Title, $"%{search}%"));
+            query = query.Where(task =>
+                EF.Functions.Like(task.Title, $"%{search}%"));
         }
 
-        return await query.ToListAsync(cancellationToken).ConfigureAwait(false);
+        var totalCount = await query
+            .CountAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        var items = await query
+            .OrderBy(task => task.Title)
+            .Skip((pageNumber - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        return (items, totalCount);
     }
 
     public async Task<ProjectTask?> GetByIdAsync(Guid projectTaskId, Guid projectId, CancellationToken cancellationToken)

@@ -76,7 +76,7 @@ public class ProjectTaskService(IProjectTaskRepository projectTaskRepository, IL
         }
     }
 
-    public async Task<IEnumerable<ProjectTaskResponse>> GetAllAsync(GetProjectTasksModel model, CancellationToken cancellationToken)
+    public async Task<GetProjectTasksResponse> GetAllAsync(GetProjectTasksModel model, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(model);
 
@@ -87,12 +87,13 @@ public class ProjectTaskService(IProjectTaskRepository projectTaskRepository, IL
             if (!projectExists)
             {
                 _logger.LogWarning("Attempt to get tasks for non-existent project: {ProjectId}", model.ProjectId);
+
                 throw new NotFoundException("Project not found.");
             }
 
-            var tasks = await _projectTaskRepository.GetAllAsync(model.ProjectId, model.Search, cancellationToken).ConfigureAwait(false);
+            var (tasks, totalCount) = await _projectTaskRepository.GetAllAsync(model.ProjectId, model.Search, model.PageNumber, model.PageSize, cancellationToken).ConfigureAwait(false);
 
-            return tasks.Select(task => new ProjectTaskResponse
+            var items = tasks.Select(task => new ProjectTaskResponse
             {
                 Id = task.Id,
                 Title = task.Title,
@@ -102,6 +103,17 @@ public class ProjectTaskService(IProjectTaskRepository projectTaskRepository, IL
                 DueDate = task.DueDate,
                 ProjectId = task.ProjectId
             });
+
+            var totalPages = (int)Math.Ceiling(totalCount / (double)model.PageSize);
+
+            return new GetProjectTasksResponse
+            {
+                Items = items,
+                PageNumber = model.PageNumber,
+                PageSize = model.PageSize,
+                TotalCount = totalCount,
+                TotalPages = totalPages
+            };
         }
         catch (OperationCanceledException)
         {

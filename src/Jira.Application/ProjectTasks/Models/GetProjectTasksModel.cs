@@ -1,4 +1,4 @@
-namespace Jira.Application.ProjectTasks.Models;
+﻿namespace Jira.Application.ProjectTasks.Models;
 
 public class GetProjectTasksModel
 {
@@ -9,4 +9,8 @@ public class GetProjectTasksModel
     public Guid OwnerId { get; set; }
 
     public string? Search { get; set; }
+
+    public int PageNumber { get; set; }
+
+    public int PageSize { get; set; }
 }
