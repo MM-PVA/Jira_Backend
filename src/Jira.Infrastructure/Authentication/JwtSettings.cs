@@ -1,4 +1,4 @@
-namespace Jira.Infrastructure.Authentication;
+﻿namespace Jira.Infrastructure.Authentication;
 
 public class JwtSettings
 {
@@ -11,4 +11,6 @@ public class JwtSettings
     public string Audience { get; set; } = string.Empty;
 
     public int ExpirationMinutes { get; set; } = 60;
+
+    public int RefreshTokenExpirationDays { get; set; } = 7;
 }

@@ -57,6 +57,8 @@ public static class InfrastructureRegistration
 
         services.AddScoped<IProjectTaskRepository, ProjectTaskRepository>();
 
+        services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
+
         return services;
     }
 }

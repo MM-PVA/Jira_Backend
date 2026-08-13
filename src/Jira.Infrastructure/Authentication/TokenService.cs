@@ -1,5 +1,6 @@
 ﻿using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
+using System.Security.Cryptography;
 using System.Text;
 
 using Jira.Application.Authentication.Interfaces;
@@ -14,14 +15,13 @@ public class TokenService(IOptions<JwtSettings> jwtSettings) : ITokenService
 {
     private readonly JwtSettings _jwtSettings = jwtSettings.Value;
 
-    public (string Token, DateTime ExpiresAtUtc) GenerateToken(User user)
+    public (string Token, DateTime ExpiresAtUtc) GenerateAccessToken(User user)
     {
         ArgumentNullException.ThrowIfNull(user);
 
         var expiresAtUtc = DateTime.UtcNow.AddMinutes(_jwtSettings.ExpirationMinutes);
 
-        var claims = new[]
-        {
+        var claims = new[] {
             new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
             new Claim(ClaimTypes.Email, user.Email),
             new Claim("firstName", user.FirstName),
@@ -29,6 +29,7 @@ public class TokenService(IOptions<JwtSettings> jwtSettings) : ITokenService
         };
 
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwtSettings.SecretKey));
+
         var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
         var token = new JwtSecurityToken(
@@ -41,5 +42,23 @@ public class TokenService(IOptions<JwtSettings> jwtSettings) : ITokenService
         var accessToken = new JwtSecurityTokenHandler().WriteToken(token);
 
         return (accessToken, expiresAtUtc);
+    }
+
+    public (string Token, DateTime ExpiresAtUtc) GenerateRefreshToken()
+    {
+        var refreshToken = Convert.ToBase64String(RandomNumberGenerator.GetBytes(64));
+
+        var expiresAtUtc = DateTime.UtcNow.AddDays(_jwtSettings.RefreshTokenExpirationDays);
+
+        return (refreshToken, expiresAtUtc);
+    }
+
+    public string HashRefreshToken(string refreshToken)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(refreshToken);
+
+        var hash = SHA256.HashData(Encoding.UTF8.GetBytes(refreshToken));
+
+        return Convert.ToHexString(hash);
     }
 }

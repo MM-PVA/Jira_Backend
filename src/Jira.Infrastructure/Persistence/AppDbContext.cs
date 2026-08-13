@@ -50,6 +50,14 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         _ = modelBuilder.Entity<ProjectTask>().HasPartitionKey(task => task.ProjectId);
         _ = modelBuilder.Entity<ProjectTask>().Ignore(task => task.Project);
 
+        // RefreshToken
+        _ = modelBuilder.Entity<RefreshToken>().ToContainer("RefreshTokens");
+        _ = modelBuilder.Entity<RefreshToken>().HasKey(refreshToken => refreshToken.Id);
+        _ = modelBuilder.Entity<RefreshToken>().Property(refreshToken => refreshToken.Id).ToJsonProperty("id");
+        _ = modelBuilder.Entity<RefreshToken>().HasPartitionKey(refreshToken => refreshToken.UserId);
+        _ = modelBuilder.Entity<RefreshToken>().Ignore(refreshToken => refreshToken.IsRevoked);
+        _ = modelBuilder.Entity<RefreshToken>().Ignore(refreshToken => refreshToken.IsExpired);
+
         // Enum conversions
         _ = modelBuilder.Entity<ProjectTask>().Property(task => task.Status).HasConversion<string>();
         _ = modelBuilder.Entity<ProjectTask>().Property(task => task.Priority).HasConversion<string>();
@@ -59,4 +67,5 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<Workspace> Workspaces => Set<Workspace>();
     public DbSet<Project> Projects => Set<Project>();
     public DbSet<ProjectTask> ProjectTasks => Set<ProjectTask>();
+    public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
 }

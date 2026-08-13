@@ -52,4 +52,14 @@ public class AuthController(IAuthService authService) : ControllerBase
 
         return Ok(response);
     }
+
+    [HttpPost("refresh")]
+    public async Task<IActionResult> RefreshAsync(RefreshTokenRequest request, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+
+        var response = await _authService.RefreshAsync(request, cancellationToken).ConfigureAwait(false);
+
+        return Ok(response);
+    }
 }

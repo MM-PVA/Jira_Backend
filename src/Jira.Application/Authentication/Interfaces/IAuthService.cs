@@ -8,5 +8,7 @@ public interface IAuthService
 
     Task<LoginResponse> LoginAsync(LoginRequest request, CancellationToken cancellationToken);
 
+    Task<LoginResponse> RefreshAsync(RefreshTokenRequest request, CancellationToken cancellationToken);
+
     Task<CurrentUserResponse> GetCurrentUserAsync(Guid userId, CancellationToken cancellationToken);
 }

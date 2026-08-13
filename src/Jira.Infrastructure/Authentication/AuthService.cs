@@ -9,14 +9,11 @@ using Microsoft.Extensions.Logging;
 
 namespace Jira.Infrastructure.Authentication;
 
-public class AuthService(
-    IUserRepository userRepository,
-    ITokenService tokenService,
-    ILogger<AuthService> logger)
-    : IAuthService
+public class AuthService(IUserRepository userRepository, IRefreshTokenRepository refreshTokenRepository, ITokenService tokenService, ILogger<AuthService> logger) : IAuthService
 {
     private readonly IUserRepository _userRepository = userRepository;
     private readonly ITokenService _tokenService = tokenService;
+    private readonly IRefreshTokenRepository _refreshTokenRepository = refreshTokenRepository;
     private readonly ILogger<AuthService> _logger = logger;
     private readonly PasswordHasher<User> _passwordHasher = new();
 
@@ -85,12 +82,31 @@ public class AuthService(
                 throw new UnauthorizedException("Invalid email or password.");
             }
 
-            var (accessToken, expiresAtUtc) = _tokenService.GenerateToken(user);
+            var (accessToken, accessTokenExpiresAtUtc) = _tokenService.GenerateAccessToken(user);
+
+            var (refreshToken, refreshTokenExpiresAtUtc) = _tokenService.GenerateRefreshToken();
+
+            var refreshTokenHash = _tokenService.HashRefreshToken(refreshToken);
+
+            var refreshTokenEntity = new RefreshToken
+            {
+                UserId = user.Id,
+                TokenHash = refreshTokenHash,
+                ExpiresAtUtc = refreshTokenExpiresAtUtc,
+            };
+
+            await _refreshTokenRepository.AddAsync(refreshTokenEntity, cancellationToken).ConfigureAwait(false);
+
+            await _refreshTokenRepository.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+            _logger.LogInformation("Login successful for user {UserId}", user.Id);
 
             return new LoginResponse
             {
                 AccessToken = accessToken,
-                ExpiresAtUtc = expiresAtUtc
+                ExpiresAtUtc = accessTokenExpiresAtUtc,
+                RefreshToken = refreshToken,
+                RefreshTokenExpiresAtUtc = refreshTokenExpiresAtUtc,
             };
         }
         catch (OperationCanceledException)
@@ -125,6 +141,74 @@ public class AuthService(
         catch (OperationCanceledException)
         {
             _logger.LogWarning("GetCurrentUser request cancelled for user ID: {UserId}", userId);
+            throw;
+        }
+    }
+
+    public async Task<LoginResponse> RefreshAsync(RefreshTokenRequest request, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+
+        try
+        {
+            var tokenHash = _tokenService.HashRefreshToken(request.RefreshToken);
+
+            var refreshToken = await _refreshTokenRepository.GetByTokenHashAsync(tokenHash, cancellationToken).ConfigureAwait(false);
+
+            if (refreshToken is null)
+            {
+                throw new UnauthorizedException("Invalid refresh token.");
+            }
+
+            if (refreshToken.IsRevoked)
+            {
+                throw new UnauthorizedException("Refresh token has been revoked.");
+            }
+
+            if (refreshToken.IsExpired)
+            {
+                throw new UnauthorizedException("Refresh token has expired.");
+            }
+
+            var user = await _userRepository.GetByIdAsync(refreshToken.UserId, cancellationToken).ConfigureAwait(false);
+
+            if (user is null)
+            {
+                throw new UnauthorizedException("User not found.");
+            }
+
+            var (accessToken, accessTokenExpiresAtUtc) = _tokenService.GenerateAccessToken(user);
+
+            var (newRefreshToken, newRefreshTokenExpiresAtUtc) = _tokenService.GenerateRefreshToken();
+
+            var newRefreshTokenHash = _tokenService.HashRefreshToken(newRefreshToken);
+
+            refreshToken.RevokedAtUtc = DateTime.UtcNow;
+
+            var replacementRefreshToken = new RefreshToken
+            {
+                UserId = user.Id,
+                TokenHash = newRefreshTokenHash,
+                ExpiresAtUtc = newRefreshTokenExpiresAtUtc,
+            };
+
+            await _refreshTokenRepository.AddAsync(replacementRefreshToken, cancellationToken).ConfigureAwait(false);
+
+            await _refreshTokenRepository.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+            _logger.LogInformation("Refresh token rotated successfully for user {UserId}", user.Id);
+
+            return new LoginResponse
+            {
+                AccessToken = accessToken,
+                ExpiresAtUtc = accessTokenExpiresAtUtc,
+                RefreshToken = newRefreshToken,
+                RefreshTokenExpiresAtUtc = newRefreshTokenExpiresAtUtc,
+            };
+        }
+        catch (OperationCanceledException)
+        {
+            _logger.LogWarning("Refresh token request cancelled.");
             throw;
         }
     }
