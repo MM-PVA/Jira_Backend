@@ -16,7 +16,7 @@ using Jira.Application.Authentication.Interfaces.Repositories;
 using Jira.Application.Workspaces.Interfaces.Repositories;
 using Jira.Application.Projects.Interfaces.Repositories;
 using Jira.Application.ProjectTasks.Interfaces.Repositories;
-using Microsoft.Azure.Cosmos;
+// using Microsoft.Azure.Cosmos;
 
 namespace Jira.Infrastructure;
 
@@ -28,10 +28,17 @@ public static class InfrastructureRegistration
         ArgumentNullException.ThrowIfNull(configuration);
 
         // options is the object configures how EF Core should work.
+        // services.AddDbContext<AppDbContext>(options =>
+        // {
+        //     options.UseCosmos(configuration.GetConnectionString("DefaultConnection")!, configuration["CosmosDb:DatabaseName"]!,
+        //         cosmosOptions => cosmosOptions.ConnectionMode(ConnectionMode.Gateway));
+        // });
+
         services.AddDbContext<AppDbContext>(options =>
         {
-            options.UseCosmos(configuration.GetConnectionString("DefaultConnection")!, configuration["CosmosDb:DatabaseName"]!,
-                cosmosOptions => cosmosOptions.ConnectionMode(ConnectionMode.Gateway));
+            options.UseSqlite(
+                configuration.GetConnectionString("DefaultConnection")
+            );
         });
 
         services.Configure<JwtSettings>(configuration.GetSection(JwtSettings.SectionName));
